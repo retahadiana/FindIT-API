@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"time"
 
 	"findit-api/config"
@@ -12,10 +13,10 @@ import (
 
 // NewPool membuat connection pool PostgreSQL dan memverifikasi koneksi dengan Ping.
 func NewPool(ctx context.Context) (*pgxpool.Pool, error) {
+	userInfo := url.UserPassword(config.GetEnv("DB_USER", "postgres"), config.GetEnv("DB_PASSWORD", ""))
 	dsn := fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		config.GetEnv("DB_USER", "postgres"),
-		config.GetEnv("DB_PASSWORD", ""),
+		"postgres://%s@%s:%s/%s?sslmode=%s",
+		userInfo.String(),
 		config.GetEnv("DB_HOST", "localhost"),
 		config.GetEnv("DB_PORT", "5432"),
 		config.GetEnv("DB_NAME", "findit_db"),
