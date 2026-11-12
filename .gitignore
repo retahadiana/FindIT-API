@@ -30,3 +30,6 @@ logs/*.log
 # OS files
 .DS_Store
 Thumbs.db
+
+# Air live-reload temporary build
+tmp/
