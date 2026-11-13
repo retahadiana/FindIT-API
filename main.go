@@ -13,6 +13,7 @@ import (
 	"findit-api/app/service"
 	"findit-api/config"
 	"findit-api/database"
+	_ "findit-api/docs"
 	"findit-api/helper"
 	"findit-api/route"
 )

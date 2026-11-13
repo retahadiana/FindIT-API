@@ -1,0 +1,1973 @@
+basePath: /api/v1
+definitions:
+  model.AddReputationRequest:
+    properties:
+      claim_id:
+        minimum: 1
+        type: integer
+      feedback:
+        $ref: '#/definitions/model.Feedback'
+      item_id:
+        minimum: 1
+        type: integer
+      points:
+        maximum: 100
+        minimum: 1
+        type: integer
+      reason:
+        maxLength: 255
+        minLength: 3
+        type: string
+    required:
+    - claim_id
+    - item_id
+    - points
+    - reason
+    type: object
+  model.AssignRoleRequest:
+    properties:
+      role:
+        enum:
+        - admin
+        - staff
+        - user
+        type: string
+    required:
+    - role
+    type: object
+  model.Category:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  model.Claim:
+    properties:
+      claimant_id:
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: integer
+      item_id:
+        type: integer
+      proof_description:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  model.CreateCategoryRequest:
+    properties:
+      description:
+        maxLength: 300
+        type: string
+      name:
+        maxLength: 80
+        minLength: 2
+        type: string
+    required:
+    - name
+    type: object
+  model.CreateClaimRequest:
+    properties:
+      proof_description:
+        maxLength: 2000
+        minLength: 10
+        type: string
+    required:
+    - proof_description
+    type: object
+  model.CreateItemRequest:
+    properties:
+      category_id:
+        minimum: 1
+        type: integer
+      description:
+        maxLength: 2000
+        minLength: 10
+        type: string
+      event_date:
+        type: string
+      item_type:
+        enum:
+        - lost
+        - found
+        type: string
+      location:
+        maxLength: 150
+        minLength: 3
+        type: string
+      title:
+        maxLength: 150
+        minLength: 3
+        type: string
+    required:
+    - category_id
+    - description
+    - event_date
+    - item_type
+    - location
+    - title
+    type: object
+  model.CreateUserRequest:
+    properties:
+      email:
+        maxLength: 120
+        type: string
+      full_name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      password:
+        maxLength: 72
+        type: string
+      phone:
+        maxLength: 20
+        minLength: 8
+        type: string
+      role:
+        enum:
+        - admin
+        - staff
+        - user
+        type: string
+      username:
+        maxLength: 50
+        minLength: 3
+        type: string
+    required:
+    - email
+    - full_name
+    - password
+    - username
+    type: object
+  model.ErrorResponse:
+    properties:
+      code:
+        type: string
+      fields:
+        additionalProperties:
+          type: string
+        type: object
+      message:
+        type: string
+      request_id:
+        type: string
+      success:
+        type: boolean
+    type: object
+  model.Feedback:
+    properties:
+      comment:
+        maxLength: 500
+        type: string
+      from_user_id:
+        type: integer
+      rating:
+        maximum: 5
+        minimum: 1
+        type: integer
+    required:
+    - rating
+    type: object
+  model.Item:
+    properties:
+      category_id:
+        type: integer
+      category_name:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      event_date:
+        type: string
+      id:
+        type: integer
+      item_type:
+        type: string
+      location:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+      version:
+        type: integer
+    type: object
+  model.LoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  model.Notification:
+    properties:
+      body:
+        type: string
+      channel:
+        type: string
+      id:
+        type: integer
+      outbox_id:
+        type: integer
+      sent_at:
+        type: string
+      subject:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  model.OutboxStats:
+    properties:
+      pending:
+        type: integer
+      published:
+        type: integer
+    type: object
+  model.PatchUserRequest:
+    properties:
+      full_name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      phone:
+        maxLength: 20
+        minLength: 8
+        type: string
+    type: object
+  model.QuestionAnswer:
+    properties:
+      answer:
+        maxLength: 500
+        type: string
+      is_matched:
+        type: boolean
+      question:
+        maxLength: 300
+        minLength: 3
+        type: string
+    required:
+    - question
+    type: object
+  model.QueueMonitorResponse:
+    properties:
+      notifications_sent:
+        type: integer
+      outbox:
+        $ref: '#/definitions/model.OutboxStats'
+      queues:
+        items:
+          $ref: '#/definitions/model.QueueStats'
+        type: array
+    type: object
+  model.QueueStats:
+    properties:
+      active:
+        type: integer
+      archived:
+        type: integer
+      pending:
+        type: integer
+      queue:
+        type: string
+      retry:
+        type: integer
+      scheduled:
+        type: integer
+    type: object
+  model.RefreshRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  model.RegisterRequest:
+    properties:
+      email:
+        maxLength: 120
+        type: string
+      full_name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      password:
+        maxLength: 72
+        type: string
+      phone:
+        maxLength: 20
+        minLength: 8
+        type: string
+      username:
+        maxLength: 50
+        minLength: 3
+        type: string
+    required:
+    - email
+    - full_name
+    - password
+    - username
+    type: object
+  model.ReplaceUserRequest:
+    properties:
+      email:
+        maxLength: 120
+        type: string
+      full_name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      phone:
+        maxLength: 20
+        minLength: 8
+        type: string
+      username:
+        maxLength: 50
+        minLength: 3
+        type: string
+    required:
+    - email
+    - full_name
+    - username
+    type: object
+  model.ReputationLog:
+    properties:
+      claim_id:
+        type: integer
+      created_at:
+        type: string
+      feedback:
+        $ref: '#/definitions/model.Feedback'
+      id:
+        type: string
+      item_id:
+        type: integer
+      points:
+        type: integer
+      reason:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  model.ReputationSummary:
+    properties:
+      avg_rating:
+        type: number
+      count:
+        type: integer
+      distribution:
+        additionalProperties:
+          type: integer
+        type: object
+      total_points:
+        type: integer
+      user_id:
+        type: integer
+    type: object
+  model.ReviewVerificationRequest:
+    properties:
+      confidential_notes:
+        maxLength: 500
+        type: string
+      is_verified:
+        type: boolean
+    type: object
+  model.SubmitQARequest:
+    properties:
+      questions:
+        items:
+          $ref: '#/definitions/model.QuestionAnswer'
+        maxItems: 10
+        minItems: 1
+        type: array
+    required:
+    - questions
+    type: object
+  model.TokenPair:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+    type: object
+  model.UpdateClaimStatusRequest:
+    properties:
+      status:
+        enum:
+        - approved
+        - rejected
+        - cancelled
+        type: string
+    required:
+    - status
+    type: object
+  model.UpdateItemRequest:
+    properties:
+      category_id:
+        minimum: 1
+        type: integer
+      description:
+        maxLength: 2000
+        minLength: 10
+        type: string
+      location:
+        maxLength: 150
+        minLength: 3
+        type: string
+      status:
+        enum:
+        - open
+        - claimed
+        - returned
+        - closed
+        type: string
+      title:
+        maxLength: 150
+        minLength: 3
+        type: string
+    required:
+    - category_id
+    - description
+    - location
+    - status
+    - title
+    type: object
+  model.UpdateUserRequest:
+    properties:
+      full_name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      phone:
+        maxLength: 20
+        minLength: 8
+        type: string
+    required:
+    - full_name
+    type: object
+  model.User:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      full_name:
+        type: string
+      id:
+        type: integer
+      phone:
+        type: string
+      role:
+        type: string
+      trust_score:
+        type: integer
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+  model.UserProfile:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      full_name:
+        type: string
+      id:
+        type: integer
+      permissions:
+        items:
+          type: string
+        type: array
+      phone:
+        type: string
+      role:
+        type: string
+      trust_score:
+        type: integer
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+  model.UserReputationResponse:
+    properties:
+      badge:
+        type: string
+      history:
+        items:
+          $ref: '#/definitions/model.ReputationLog'
+        type: array
+      score:
+        type: integer
+      total_found:
+        type: integer
+      user:
+        $ref: '#/definitions/model.User'
+    type: object
+  model.VerificationSession:
+    properties:
+      claim_id:
+        type: integer
+      claimant_id:
+        type: integer
+      confidential_notes:
+        type: string
+      created_at:
+        type: string
+      finder_id:
+        type: integer
+      id:
+        type: string
+      is_verified:
+        type: boolean
+      item_id:
+        type: integer
+      questions:
+        items:
+          $ref: '#/definitions/model.QuestionAnswer'
+        type: array
+      updated_at:
+        type: string
+    type: object
+  model.WebResponse:
+    properties:
+      data: {}
+      errors: {}
+      message:
+        type: string
+      meta: {}
+      success:
+        type: boolean
+    type: object
+info:
+  contact: {}
+  description: API Lost and Found Kampus untuk pelaporan dan pencarian barang hilang/temuan,
+    verifikasi klaim, reputasi, dan notifikasi outbox.
+  title: FindIt API - Lost & Found Kampus
+  version: "1.0"
+paths:
+  /admin/queue:
+    get:
+      description: Memantau statistik antrian Redis Asynq dan baris unpublished tabel
+        outbox PostgreSQL.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.QueueMonitorResponse'
+              type: object
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Tidak memiliki izin queue:monitor
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Monitor status antrian Asynq dan transactional outbox
+      tags:
+      - notifications
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Masuk dengan username dan password untuk memperoleh Access Token
+        dan Refresh Token.
+      parameters:
+      - description: Kredensial login
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.TokenPair'
+              type: object
+        "400":
+          description: Body bukan JSON valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Username atau password salah
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "422":
+          description: Validasi gagal
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Login dan mendapatkan token
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Mencabut refresh token aktif dari database.
+      parameters:
+      - description: Refresh token yang akan dicabut
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.WebResponse'
+        "400":
+          description: Body bukan JSON valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Logout sesi pengguna
+      tags:
+      - auth
+  /auth/me:
+    get:
+      description: Mengambil detail profil dan daftar permission pengguna yang sedang
+        login.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.UserProfile'
+              type: object
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Profil pengguna aktif
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Menukar refresh token valid dengan pasangan access token dan refresh
+        token baru (token rotation).
+      parameters:
+      - description: Refresh token saat ini
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.TokenPair'
+              type: object
+        "400":
+          description: Body bukan JSON valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Refresh token tidak valid atau kedaluwarsa
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "422":
+          description: Validasi gagal
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Memperbarui access token
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Mendaftarkan pengguna mahasiswa baru dengan role default user dan
+        trust score 100.
+      parameters:
+      - description: Data pendaftaran pengguna
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.User'
+              type: object
+        "400":
+          description: Body bukan JSON valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "409":
+          description: Username atau email sudah digunakan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "422":
+          description: Validasi gagal
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Mendaftarkan akun baru
+      tags:
+      - auth
+  /categories:
+    get:
+      description: Mengambil semua daftar kategori barang yang tersedia.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.Category'
+                  type: array
+              type: object
+        "500":
+          description: Terjadi kesalahan internal server
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Daftar seluruh kategori barang
+      tags:
+      - categories
+    post:
+      consumes:
+      - application/json
+      description: Membuat kategori barang baru di database. Memerlukan permission
+        category:manage.
+      parameters:
+      - description: Data kategori baru
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.Category'
+              type: object
+        "400":
+          description: Body bukan JSON valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Tidak memiliki izin category:manage
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "409":
+          description: Nama kategori sudah ada
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "422":
+          description: Validasi gagal
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Buat kategori baru (Admin)
+      tags:
+      - categories
+  /claims/{id}:
+    get:
+      description: Mengambil rincian informasi klaim barang.
+      parameters:
+      - description: ID Klaim
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.Claim'
+              type: object
+        "400":
+          description: ID klaim tidak valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Klaim tidak ditemukan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Detail klaim berdasarkan ID
+      tags:
+      - claims
+  /claims/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      description: Mengubah status pengajuan klaim. Jika approved, status barang diubah
+        menjadi returned menggunakan Optimistic Concurrency Control (OCC) dan memicu
+        event outbox.
+      parameters:
+      - description: ID Klaim
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Status baru (approved, rejected, cancelled)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateClaimStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.Claim'
+              type: object
+        "400":
+          description: ID atau payload tidak valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Tidak memiliki hak memproses klaim
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Klaim atau barang tidak ditemukan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "409":
+          description: Klaim sudah diproses atau terjadi konflik OCC versi barang
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Ubah status klaim (Approved / Rejected / Cancelled) dengan OCC
+      tags:
+      - claims
+  /claims/{id}/verification:
+    get:
+      description: Mengambil data sesi tanya-jawab ciri khusus barang dari MongoDB
+        berdasarkan ID klaim.
+      parameters:
+      - description: ID Klaim
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.VerificationSession'
+              type: object
+        "400":
+          description: ID klaim tidak valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Sesi verifikasi tidak ditemukan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Ambil sesi verifikasi tanya-jawab ciri khusus
+      tags:
+      - verifications
+    post:
+      consumes:
+      - application/json
+      description: Penemu barang membuat daftar pertanyaan ciri khusus rahasia (maksimal
+        10 pertanyaan disimpan di MongoDB) untuk dijawab oleh pengklaim.
+      parameters:
+      - description: ID Klaim
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Daftar pertanyaan verifikasi
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.SubmitQARequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.VerificationSession'
+              type: object
+        "400":
+          description: ID klaim atau payload tidak valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Hanya penemu barang yang berhak membuat sesi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Klaim tidak ditemukan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "409":
+          description: Sesi verifikasi untuk klaim ini sudah ada atau klaim bukan
+            pending
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Buat sesi pertanyaan verifikasi rahasia (Penemu)
+      tags:
+      - verifications
+  /claims/{id}/verification/answers:
+    put:
+      consumes:
+      - application/json
+      description: Pengklaim menjawab pertanyaan-pertanyaan ciri khusus yang diajukan
+        oleh penemu.
+      parameters:
+      - description: ID Klaim
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Jawaban atas pertanyaan verifikasi
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.SubmitQARequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.VerificationSession'
+              type: object
+        "400":
+          description: ID klaim atau payload tidak valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Hanya pengklaim yang berhak menjawab pertanyaan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Sesi verifikasi tidak ditemukan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Jawab pertanyaan verifikasi (Pengklaim)
+      tags:
+      - verifications
+  /claims/{id}/verification/review:
+    post:
+      consumes:
+      - application/json
+      description: Penemu atau admin menilai kebenaran jawaban pengklaim (is_verified)
+        dan memberikan catatan rahasia.
+      parameters:
+      - description: ID Klaim
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Hasil penilaian verifikasi
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.ReviewVerificationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.VerificationSession'
+              type: object
+        "400":
+          description: ID klaim atau payload tidak valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Hanya penemu atau admin yang berhak meninjau
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Sesi verifikasi tidak ditemukan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Tinjau dan nilai hasil jawaban verifikasi (Penemu / Admin)
+      tags:
+      - verifications
+  /claims/me:
+    get:
+      description: Menampilkan riwayat klaim barang yang pernah diajukan oleh pengguna
+        aktif.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.Claim'
+                  type: array
+              type: object
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Riwayat klaim milik pengguna yang login
+      tags:
+      - claims
+  /items:
+    get:
+      description: Menampilkan daftar laporan barang dengan filter tipe (lost/found),
+        status (open/resolved/returned), kategori, serta mendukung pagination berbasis
+        halaman, cursor, maupun ekspor CSV.
+      parameters:
+      - description: 'Filter tipe: lost atau found'
+        in: query
+        name: type
+        type: string
+      - description: 'Filter status: open, claimed, returned, resolved'
+        in: query
+        name: status
+        type: string
+      - description: Filter berdasarkan ID kategori
+        in: query
+        name: category_id
+        type: integer
+      - description: Nomor halaman (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Batas item per halaman (default 20, maks 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Kata kunci judul atau deskripsi
+        in: query
+        name: search
+        type: string
+      - description: Cursor untuk cursor-based pagination
+        in: query
+        name: after
+        type: string
+      produces:
+      - application/json
+      - text/csv
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.Item'
+                  type: array
+              type: object
+      summary: Daftar laporan barang (Lost / Found)
+      tags:
+      - items
+    post:
+      consumes:
+      - application/json
+      description: Mendaftarkan laporan kehilangan (lost) atau penemuan barang (found).
+      parameters:
+      - description: Data laporan barang
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateItemRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.Item'
+              type: object
+        "400":
+          description: Body bukan JSON valid atau kategori tidak ditemukan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "422":
+          description: Validasi gagal
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Buat laporan barang hilang atau temuan
+      tags:
+      - items
+  /items/{id}:
+    delete:
+      description: Menghapus postingan barang yang dibuat oleh pengguna atau oleh
+        admin.
+      parameters:
+      - description: ID Barang
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: Berhasil dihapus tanpa body
+        "400":
+          description: ID barang tidak valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Tidak berhak menghapus
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Barang tidak ditemukan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Hapus laporan barang
+      tags:
+      - items
+    get:
+      description: Mengambil rincian informasi satu barang berdasarkan ID.
+      parameters:
+      - description: ID Barang
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.Item'
+              type: object
+        "400":
+          description: ID barang tidak valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Barang tidak ditemukan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Detail laporan barang
+      tags:
+      - items
+    put:
+      consumes:
+      - application/json
+      description: Memperbarui informasi laporan barang milik sendiri atau oleh admin.
+      parameters:
+      - description: ID Barang
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Data pembaruan laporan
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.Item'
+              type: object
+        "400":
+          description: Data atau ID tidak valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Bukan pemilik atau admin
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Barang tidak ditemukan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Perbarui laporan barang
+      tags:
+      - items
+  /items/{id}/claims:
+    get:
+      description: Menampilkan seluruh pengajuan klaim untuk barang temuan tertentu.
+        Hanya dapat diakses oleh penemu barang tersebut atau admin.
+      parameters:
+      - description: ID Barang Temuan
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.Claim'
+                  type: array
+              type: object
+        "400":
+          description: ID barang tidak valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Bukan penemu barang atau admin
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Barang tidak ditemukan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Daftar klaim masuk untuk suatu barang temuan
+      tags:
+      - claims
+    post:
+      consumes:
+      - application/json
+      description: Mengajukan klaim kepemilikan atas suatu barang temuan yang berstatus
+        open. Memicu outbox event claim.submitted.
+      parameters:
+      - description: ID Barang Temuan
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Deskripsi bukti kepemilikan
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateClaimRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.Claim'
+              type: object
+        "400":
+          description: Data atau ID tidak valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Tidak boleh mengklaim barang temuan sendiri
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Barang tidak ditemukan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "409":
+          description: Bukan barang temuan open atau klaim sudah diajukan sebelumnya
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Ajukan klaim barang temuan
+      tags:
+      - claims
+  /notifications/mine:
+    get:
+      description: Menampilkan riwayat notifikasi email/in-app yang diterima oleh
+        pengguna aktif.
+      parameters:
+      - description: Batas jumlah notifikasi (default 20)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.Notification'
+                  type: array
+              type: object
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Daftar notifikasi milik pengguna yang login
+      tags:
+      - notifications
+  /users:
+    get:
+      description: Menampilkan daftar pengguna dengan cursor pagination atau ekspor
+        CSV melalui header Accept.
+      parameters:
+      - description: Cursor untuk navigasi halaman berikutnya
+        in: query
+        name: cursor
+        type: string
+      - description: Batas jumlah data per halaman (default 20, maks 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Pencarian nama atau username
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      - text/csv
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.User'
+                  type: array
+              type: object
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Tidak memiliki izin user:list
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Daftar pengguna terpaginasi atau CSV
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: Menambahkan pengguna baru secara langsung ke database.
+      parameters:
+      - description: Data pengguna baru
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.User'
+              type: object
+        "400":
+          description: Body harus JSON valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Tidak memiliki izin
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "409":
+          description: Username atau email sudah dipakai
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "422":
+          description: Validasi gagal
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Buat pengguna baru oleh admin/staff
+      tags:
+      - users
+  /users/{id}:
+    delete:
+      description: Menghapus data akun pengguna dari sistem secara permanen.
+      parameters:
+      - description: ID Pengguna
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: Berhasil dihapus tanpa body
+        "400":
+          description: ID user tidak valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Tidak memiliki izin user:delete
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: User tidak ditemukan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Hapus pengguna
+      tags:
+      - users
+    get:
+      description: Mengambil informasi profil pengguna tertentu berdasarkan ID.
+      parameters:
+      - description: ID Pengguna
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.User'
+              type: object
+        "400":
+          description: ID user tidak valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Hanya boleh melihat profil sendiri
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: User tidak ditemukan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Ambil data pengguna berdasarkan ID
+      tags:
+      - users
+    patch:
+      consumes:
+      - application/json
+      description: Memperbarui sebagian field profil pengguna (partial update).
+      parameters:
+      - description: ID Pengguna
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Field yang akan diperbarui
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.PatchUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.User'
+              type: object
+        "400":
+          description: Minimal satu field harus diisi atau ID tidak valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Tidak memiliki izin
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: User tidak ditemukan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Perbarui sebagian data pengguna (PATCH)
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Mengganti atribut profil pengguna secara utuh berdasarkan ID.
+      parameters:
+      - description: ID Pengguna
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Data lengkap pengguna
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.ReplaceUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.User'
+              type: object
+        "400":
+          description: ID atau body tidak valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Tidak memiliki izin
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: User tidak ditemukan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "409":
+          description: Username atau email sudah dipakai
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Ganti seluruh atribut data pengguna (PUT)
+      tags:
+      - users
+  /users/{id}/reputation:
+    get:
+      description: Mengambil skor trust score, badge level, total barang dikembalikan,
+        dan riwayat ulasan dari MongoDB.
+      parameters:
+      - description: ID Pengguna
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.UserReputationResponse'
+              type: object
+        "400":
+          description: ID user harus berupa angka positif
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: User tidak ditemukan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Ambil skor reputasi dan riwayat log pengguna
+      tags:
+      - reputation
+  /users/{id}/reputation/summary:
+    get:
+      description: Mengambil ringkasan statistik rating bintang pengguna via MongoDB
+        aggregation $facet.
+      parameters:
+      - description: ID Pengguna
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.ReputationSummary'
+              type: object
+        "400":
+          description: ID user harus berupa angka positif
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Ringkasan distribusi rating reputasi
+      tags:
+      - reputation
+  /users/{id}/reward:
+    post:
+      consumes:
+      - application/json
+      description: Menambahkan poin reputasi kejujuran dan ulasan bintang/komentar
+        atas pengembalian barang.
+      parameters:
+      - description: ID Pengguna Penerima Reward
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Detail poin dan feedback
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.AddReputationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.WebResponse'
+        "400":
+          description: Data tidak valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Tidak boleh memberi reward ke diri sendiri
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: User tidak ditemukan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "409":
+          description: Reward untuk klaim ini sudah pernah diberikan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Berikan reward poin reputasi dan feedback
+      tags:
+      - reputation
+  /users/{id}/role:
+    patch:
+      consumes:
+      - application/json
+      description: Mengubah level kewenangan role pengguna (admin/staff/user).
+      parameters:
+      - description: ID Pengguna
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Peran baru
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.AssignRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.User'
+              type: object
+        "400":
+          description: Body bukan JSON valid atau role tidak dikenal
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Tidak memiliki izin role:assign atau tidak boleh mengubah role
+            diri sendiri
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: User tidak ditemukan
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Ubah peran pengguna (Assign Role)
+      tags:
+      - users
+  /users/profile:
+    put:
+      consumes:
+      - application/json
+      description: Mengubah nama lengkap dan nomor telepon akun yang sedang login.
+      parameters:
+      - description: Data pembaruan profil
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.User'
+              type: object
+        "400":
+          description: Body bukan JSON valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "422":
+          description: Validasi gagal
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Perbarui profil diri sendiri
+      tags:
+      - users
+securityDefinitions:
+  BearerAuth:
+    description: 'Masukkan token dengan format: Bearer <access_token>'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
