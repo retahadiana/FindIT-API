@@ -23,6 +23,8 @@ type Dependencies struct {
 	UserService         *service.UserService         // [Lifia]
 	ReputationService   *service.ReputationService   // [Lifia]
 	NotificationService *service.NotificationService // [Lifia]
+	CategoryService     *service.CategoryService     // [Reta]
+	ItemService         *service.ItemService         // [Reta]
 }
 
 // Register mendaftarkan seluruh endpoint API FindIt modul Fase 1 ke Fiber app.
@@ -61,6 +63,26 @@ func Register(app *fiber.App, deps Dependencies) {
 	if deps.NotificationService != nil {
 		api.Get("/notifications/mine", middleware.RequireAuth(deps.JWT), deps.NotificationService.Mine)
 		api.Get("/admin/queue", middleware.RequireAuth(deps.JWT), middleware.RequirePermission(deps.Permissions, "queue:monitor"), deps.NotificationService.Monitor)
+	}
+
+	// Fase 2 — Categories & Items (Reta)
+	if deps.CategoryService != nil {
+		cat := api.Group("/categories")
+		cat.Get("/", deps.CategoryService.List)
+		cat.Post("/", middleware.RequireAuth(deps.JWT),
+			middleware.RequirePermission(deps.Permissions, "category:manage"),
+			middleware.RequireJSON, deps.CategoryService.Create)
+	}
+
+	if deps.ItemService != nil {
+		items := api.Group("/items")
+		items.Get("/", deps.ItemService.List)
+		items.Get("/:id", deps.ItemService.Get)
+		items.Post("/", middleware.RequireAuth(deps.JWT), middleware.RequireJSON,
+			deps.ItemService.Create)
+		items.Put("/:id", middleware.RequireAuth(deps.JWT), middleware.RequireJSON,
+			deps.ItemService.Update)
+		items.Delete("/:id", middleware.RequireAuth(deps.JWT), deps.ItemService.Delete)
 	}
 }
 
