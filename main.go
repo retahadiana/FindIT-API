@@ -62,6 +62,10 @@ func main() {
 		notifRepo := repository.NewNotificationRepository(pool)
 		catRepo := repository.NewCategoryRepository(pool)
 		itemRepo := repository.NewItemRepository(pool)
+		claimRepo := repository.NewClaimRepository(pool)
+		verifRepo := repository.NewVerificationRepository(mongoDB)
+		_ = verifRepo.EnsureIndexes(ctx)
+		txMgr := repository.NewTxManager(pool)
 		repRepo := repository.NewReputationRepository(mongoDB)
 		_ = repRepo.EnsureIndexes(ctx)
 
@@ -89,6 +93,8 @@ func main() {
 			NotificationService: service.NewNotificationService(notifRepo, outboxRepo, inspector),
 			CategoryService:     service.NewCategoryService(catRepo),
 			ItemService:         service.NewItemService(itemRepo, catRepo),
+			ClaimService:        service.NewClaimService(claimRepo, itemRepo, outboxRepo, txMgr),
+			VerificationService: service.NewVerificationService(verifRepo, claimRepo, itemRepo),
 		}, config.GetEnv("ALLOWED_ORIGINS", "*"))
 
 		port := config.GetEnv("APP_PORT", "3000")

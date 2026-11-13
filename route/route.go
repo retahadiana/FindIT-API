@@ -25,6 +25,8 @@ type Dependencies struct {
 	NotificationService *service.NotificationService // [Lifia]
 	CategoryService     *service.CategoryService     // [Reta]
 	ItemService         *service.ItemService         // [Reta]
+	ClaimService        *service.ClaimService        // [Zaskia]
+	VerificationService *service.VerificationService // [Zaskia]
 }
 
 // Register mendaftarkan seluruh endpoint API FindIt modul Fase 1 ke Fiber app.
@@ -83,6 +85,25 @@ func Register(app *fiber.App, deps Dependencies) {
 		items.Put("/:id", middleware.RequireAuth(deps.JWT), middleware.RequireJSON,
 			deps.ItemService.Update)
 		items.Delete("/:id", middleware.RequireAuth(deps.JWT), deps.ItemService.Delete)
+	}
+
+	// Fase 3 — Claims & Verification (Zaskia)
+	if deps.ClaimService != nil {
+		claims := api.Group("/claims", middleware.RequireAuth(deps.JWT))
+		claims.Get("/me", deps.ClaimService.MyClaims)
+		claims.Get("/:id", deps.ClaimService.Get)
+		claims.Patch("/:id/status", middleware.RequireJSON, deps.ClaimService.UpdateStatus)
+
+		api.Post("/items/:id/claims", middleware.RequireAuth(deps.JWT), middleware.RequireJSON, deps.ClaimService.Create)
+		api.Get("/items/:id/claims", middleware.RequireAuth(deps.JWT), deps.ClaimService.ListByItem)
+	}
+
+	if deps.VerificationService != nil {
+		verif := api.Group("/claims/:id/verification", middleware.RequireAuth(deps.JWT))
+		verif.Get("/", deps.VerificationService.GetSession)
+		verif.Post("/", middleware.RequireJSON, deps.VerificationService.CreateSession)
+		verif.Put("/answers", middleware.RequireJSON, deps.VerificationService.AnswerQuestions)
+		verif.Post("/review", middleware.RequireJSON, deps.VerificationService.ReviewVerifications)
 	}
 }
 
