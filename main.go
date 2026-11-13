@@ -17,6 +17,14 @@ import (
 	"findit-api/route"
 )
 
+// @title FindIt API - Lost & Found Kampus
+// @version 1.0
+// @description API Lost and Found Kampus untuk pelaporan dan pencarian barang hilang/temuan, verifikasi klaim, reputasi, dan notifikasi outbox.
+// @BasePath /api/v1
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Masukkan token dengan format: Bearer <access_token>
 func main() {
 	config.LoadEnv()
 	logger := config.NewLogger()
@@ -95,6 +103,7 @@ func main() {
 			ItemService:         service.NewItemService(itemRepo, catRepo),
 			ClaimService:        service.NewClaimService(claimRepo, itemRepo, outboxRepo, txMgr),
 			VerificationService: service.NewVerificationService(verifRepo, claimRepo, itemRepo),
+			EnableSwagger:       config.GetEnv("SWAGGER_ENABLED", "true") == "true",
 		}, config.GetEnv("ALLOWED_ORIGINS", "*"))
 
 		port := config.GetEnv("APP_PORT", "3000")
