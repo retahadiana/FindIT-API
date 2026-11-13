@@ -42,6 +42,19 @@ func NewAuthService(
 	}
 }
 
+// Register godoc
+//
+// @Summary Mendaftarkan akun baru
+// @Description Mendaftarkan pengguna mahasiswa baru dengan role default user dan trust score 100.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body model.RegisterRequest true "Data pendaftaran pengguna"
+// @Success 201 {object} model.WebResponse{data=model.User}
+// @Failure 400 {object} model.ErrorResponse "Body bukan JSON valid"
+// @Failure 409 {object} model.ErrorResponse "Username atau email sudah digunakan"
+// @Failure 422 {object} model.ErrorResponse "Validasi gagal"
+// @Router /auth/register [post]
 func (s *AuthService) Register(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -85,6 +98,19 @@ func (s *AuthService) Register(c *fiber.Ctx) error {
 	return helper.Created(c, "pendaftaran berhasil", created, "/api/v1/users/"+strconv.Itoa(created.ID))
 }
 
+// Login godoc
+//
+// @Summary Login dan mendapatkan token
+// @Description Masuk dengan username dan password untuk memperoleh Access Token dan Refresh Token.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body model.LoginRequest true "Kredensial login"
+// @Success 200 {object} model.WebResponse{data=model.TokenPair}
+// @Failure 400 {object} model.ErrorResponse "Body bukan JSON valid"
+// @Failure 401 {object} model.ErrorResponse "Username atau password salah"
+// @Failure 422 {object} model.ErrorResponse "Validasi gagal"
+// @Router /auth/login [post]
 func (s *AuthService) Login(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -115,6 +141,19 @@ func (s *AuthService) Login(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "login berhasil", pair)
 }
 
+// Refresh godoc
+//
+// @Summary Memperbarui access token
+// @Description Menukar refresh token valid dengan pasangan access token dan refresh token baru (token rotation).
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body model.RefreshRequest true "Refresh token saat ini"
+// @Success 200 {object} model.WebResponse{data=model.TokenPair}
+// @Failure 400 {object} model.ErrorResponse "Body bukan JSON valid"
+// @Failure 401 {object} model.ErrorResponse "Refresh token tidak valid atau kedaluwarsa"
+// @Failure 422 {object} model.ErrorResponse "Validasi gagal"
+// @Router /auth/refresh [post]
 func (s *AuthService) Refresh(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -151,6 +190,17 @@ func (s *AuthService) Refresh(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "token berhasil diperbarui", pair)
 }
 
+// Logout godoc
+//
+// @Summary Logout sesi pengguna
+// @Description Mencabut refresh token aktif dari database.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body model.RefreshRequest true "Refresh token yang akan dicabut"
+// @Success 200 {object} model.WebResponse
+// @Failure 400 {object} model.ErrorResponse "Body bukan JSON valid"
+// @Router /auth/logout [post]
 func (s *AuthService) Logout(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -166,6 +216,16 @@ func (s *AuthService) Logout(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "logout berhasil", nil)
 }
 
+// Me godoc
+//
+// @Summary Profil pengguna aktif
+// @Description Mengambil detail profil dan daftar permission pengguna yang sedang login.
+// @Tags auth
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} model.WebResponse{data=model.UserProfile}
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Router /auth/me [get]
 func (s *AuthService) Me(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
