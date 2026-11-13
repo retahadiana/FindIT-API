@@ -19,6 +19,17 @@ func NewNotificationService(notifications repository.NotificationRepository, out
 	return &NotificationService{notifications: notifications, outbox: outbox, inspector: inspector}
 }
 
+// Mine godoc
+//
+// @Summary Daftar notifikasi milik pengguna yang login
+// @Description Menampilkan riwayat notifikasi email/in-app yang diterima oleh pengguna aktif.
+// @Tags notifications
+// @Produce json
+// @Security BearerAuth
+// @Param limit query int false "Batas jumlah notifikasi (default 20)"
+// @Success 200 {object} model.WebResponse{data=[]model.Notification}
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Router /notifications/mine [get]
 func (s *NotificationService) Mine(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -34,6 +45,17 @@ func (s *NotificationService) Mine(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "notifikasi berhasil diambil", list)
 }
 
+// Monitor godoc
+//
+// @Summary Monitor status antrian Asynq dan transactional outbox
+// @Description Memantau statistik antrian Redis Asynq dan baris unpublished tabel outbox PostgreSQL.
+// @Tags notifications
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} model.WebResponse{data=model.QueueMonitorResponse}
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Failure 403 {object} model.ErrorResponse "Tidak memiliki izin queue:monitor"
+// @Router /admin/queue [get]
 func (s *NotificationService) Monitor(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
