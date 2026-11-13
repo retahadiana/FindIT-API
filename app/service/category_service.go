@@ -19,6 +19,15 @@ func NewCategoryService(repo repository.CategoryRepository) *CategoryService {
 	return &CategoryService{repo: repo}
 }
 
+// List godoc
+//
+// @Summary Daftar seluruh kategori barang
+// @Description Mengambil semua daftar kategori barang yang tersedia.
+// @Tags categories
+// @Produce json
+// @Success 200 {object} model.WebResponse{data=[]model.Category}
+// @Failure 500 {object} model.ErrorResponse "Terjadi kesalahan internal server"
+// @Router /categories [get]
 func (s *CategoryService) List(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -30,6 +39,22 @@ func (s *CategoryService) List(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "daftar kategori berhasil diambil", list)
 }
 
+// Create godoc
+//
+// @Summary Buat kategori baru (Admin)
+// @Description Membuat kategori barang baru di database. Memerlukan permission category:manage.
+// @Tags categories
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body model.CreateCategoryRequest true "Data kategori baru"
+// @Success 201 {object} model.WebResponse{data=model.Category}
+// @Failure 400 {object} model.ErrorResponse "Body bukan JSON valid"
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Failure 403 {object} model.ErrorResponse "Tidak memiliki izin category:manage"
+// @Failure 409 {object} model.ErrorResponse "Nama kategori sudah ada"
+// @Failure 422 {object} model.ErrorResponse "Validasi gagal"
+// @Router /categories [post]
 func (s *CategoryService) Create(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
