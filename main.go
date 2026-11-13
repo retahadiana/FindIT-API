@@ -60,6 +60,8 @@ func main() {
 		roleRepo := repository.NewRoleRepository(pool)
 		outboxRepo := repository.NewOutboxRepository(pool)
 		notifRepo := repository.NewNotificationRepository(pool)
+		catRepo := repository.NewCategoryRepository(pool)
+		itemRepo := repository.NewItemRepository(pool)
 		repRepo := repository.NewReputationRepository(mongoDB)
 		_ = repRepo.EnsureIndexes(ctx)
 
@@ -85,6 +87,8 @@ func main() {
 			UserService:         service.NewUserService(userRepo, perms),
 			ReputationService:   service.NewReputationService(userRepo, repRepo, outboxRepo),
 			NotificationService: service.NewNotificationService(notifRepo, outboxRepo, inspector),
+			CategoryService:     service.NewCategoryService(catRepo),
+			ItemService:         service.NewItemService(itemRepo, catRepo),
 		}, config.GetEnv("ALLOWED_ORIGINS", "*"))
 
 		port := config.GetEnv("APP_PORT", "3000")
