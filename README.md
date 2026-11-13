@@ -1,234 +1,118 @@
-# 🎓 FindIt API - Sistem Portal Lost & Found Kampus
+# 🎓 FindIt API - Lost & Found Portal Kampus
 
-FindIt API adalah backend layanan pelaporan barang hilang (*lost*) dan temuan (*found*) di lingkungan kampus yang dibangun menggunakan **Go (Golang)**, **Fiber v2**, **PostgreSQL** (*pgxpool*), **MongoDB** (*driver v2*), dan **Redis / Asynq** (*asynchronous worker*).
-
-Repositori ini dikembangkan secara kolaboratif oleh tim PBL dengan pola arsitektur **Clean Architecture tanpa Controller terpisah** (HTTP Handler ditangani langsung oleh layer Service).
+FindIt API adalah backend layanan pelaporan barang hilang (*lost*) dan temuan (*found*) di lingkungan kampus. Dibangun menggunakan arsitektur **Clean Architecture (Service-Centric)** tanpa controller terpisah, dengan pendekatan **Hybrid Database (PostgreSQL + MongoDB)** dan antrian asynchronous **Redis / Asynq**.
 
 ---
 
-## 👥 Tim Pengembang & Pembagian Modul (Dependency-First)
+## 🚀 Fitur Utama & Status Modul
 
-Untuk mencegah konflik *Foreign Key* dan memastikan pengujian berjalan mulus, alur pengerjaan dilakukan bertahap sesuai dependensi:
-
-| Anggota | Branch Git | Modul & Lingkup Tanggung Jawab | Urutan Eksekusi |
+| Modul / Fase | Penanggung Jawab | Cakupan Fitur Utama | Status |
 |---|---|---|---|
-| **Lifia (Git Master)** | `alifia` | **Fase 0 & Fase 1**: Shared Skeleton, Users & Auth JWT, Dynamic RBAC, Reputation Engine (MongoDB `$facet`), `TxManager`, Transactional Outbox Relay & Asynq Notification Worker, serta `tools/gentoken`. | **Pertama** (modul induk, di-merge ke `main` lebih dulu) |
-| **Reta** | `reta` | **Fase 2**: Tarik `main` hasil modul Lifia, lalu kerjakan Categories, Items CRUD (kolom `version` OCC), Filter & Keyset Cursor Pagination (`?after=...`), dan ekspor CSV (`Accept: text/csv`). | **Kedua** (setelah Lifia merge ke `main`) |
-| **Zaskia** | `zaskia` | **Fase 3**: Tarik `main` hasil modul Lifia & Reta, lalu kerjakan Claims (OCC Status Approval), Q&A Verification (MongoDB Atomic Limit 10 pertanyaan), dan OCC Concurrency Load Test (`tools/loadtest_claim`). | **Ketiga** (setelah Reta merge ke `main`) |
-| **Tim / Git Master** | `main` | **Fase 4**: Final Assembly routing & entrypoint multi-role, Swagger OpenAPI documentation, Integration Tests (`tests/integration`), dan Docker Compose. | **Keempat** (perakitan akhir) |
+| **Fase 0 & 1** | Lifia | Autentikasi JWT & rotasi Refresh Token, RBAC dinamis (`roles`, `permissions`), Audit Log Reputasi & Trust Score (MongoDB `$facet`), Transactional Outbox Relay & Asynq Worker notifikasi, CLI `tools/gentoken`. | ✅ Selesai |
+| **Fase 2** | Reta | CRUD Categories & Items, filter lost/found, Keyset Cursor Pagination (`?after=...`), ekspor data CSV (`Accept: text/csv`), Optimistic Concurrency Control (OCC kolom `version`). | ✅ Selesai |
+| **Fase 3** | Zaskia | Pengajuan klaim barang temuan (TxManager atomik), verifikasi tanya-jawab ciri khusus rahasia di MongoDB (max 10 Q&A), OCC Approval pengembalian barang, script simulasi race condition `tools/loadtest_claim`. | ✅ Selesai |
+| **Fase 4** | Lifia (Lead) | Finalisasi routing terpusat ([route/route.go](file:///d:/Go/FindIT-API/route/route.go)), multi-role entrypoint ([main.go](file:///d:/Go/FindIT-API/main.go)), dan dokumentasi interaktif **Swagger OpenAPI**. | ✅ Selesai |
 
 ---
 
-## 🛠️ Prasyarat Perangkat Lunak (Prerequisites)
+## 🛠️ Prasyarat (Prerequisites)
 
-Sebelum mulai, pastikan perangkat Anda telah terpasang:
-1. **Go** (Golang) versi 1.22 atau lebih baru (`go version`).
-2. **PostgreSQL** versi 15+ (port default `5432`).
-3. **MongoDB** versi 6+ atau 7+ (port default `27017`).
-4. **Redis** versi 7+ (port default `6379`) — *diperlukan untuk antrian background worker*.
-5. *(Opsional)* **Git** & alat GUI database seperti **DBeaver**, **pgAdmin**, atau **TablePlus**.
+- **Go**: Versi 1.22 atau lebih baru
+- **PostgreSQL**: Versi 15+ (port default `5432`)
+- **MongoDB**: Versi 6+ atau 7+ (port default `27017`)
+- **Redis**: Versi 7+ (port default `6379`) — *diperlukan untuk mode worker notifikasi*
 
 ---
 
-## 🚀 Panduan Setup Manual Lengkap dari Nol (Step-by-Step)
+## 💻 Panduan Menjalankan di Lokal (Step-by-Step)
 
-Bagi anggota tim yang baru menarik (*clone/pull*) repositori ini di komputer lokal, ikuti langkah-langkah berikut secara berurutan:
-
-### Langkah 1: Clone Repositori & Masuk ke Branch Masing-Masing
-
-Buka terminal (PowerShell, CMD, atau Terminal macOS/Linux):
-```bash
-git clone https://github.com/USERNAME/FindIT-API.git
-cd FindIT-API
-
-# Jika Anda Reta:
-git checkout reta
-git pull origin main
-
-# Jika Anda Zaskia:
-git checkout zaskia
-git pull origin main
-
-# Jika Anda Lifia:
-git checkout alifia
-```
-
----
-
-### Langkah 2: Unduh Dependensi Modul Go (`go.mod` & `go.sum`)
-
-Repositori menggunakan Go Modules. Anda **tidak perlu menginstal package satu per satu**. Cukup jalankan perintah berikut untuk mengunduh seluruh pustaka yang tercatat di `go.mod` dan `go.sum`:
-
+### 1. Unduh Dependensi
 ```bash
 go mod download
-go mod verify
 ```
 
-> **Tips:** Jika nanti Anda menambahkan pustaka baru saat pengerjaan modul, gunakan `go get <nama-package>` lalu pastikan berkas `go.mod` dan `go.sum` ikut di-commit ke Git pada commit langkah tersebut.
+### 2. Siapkan Berkas Konfigurasi Lingkungan (`.env`)
+Salin `.env.example` menjadi `.env` lalu sesuaikan kredensial database lokal Anda:
+```powershell
+# Windows PowerShell
+Copy-Item .env.example .env
+```
+Pastikan `DB_PASSWORD` sesuai dengan akun PostgreSQL lokal Anda:
+```env
+APP_PORT=3000
+APP_ROLE=all
+SWAGGER_ENABLED=true
 
----
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=password_postgres_anda
+DB_NAME=findit_db
+DB_SSLMODE=disable
 
-### Langkah 3: Siapkan Database & Eksekusi Migrasi SQL
+MONGO_URI=mongodb://localhost:27017
+MONGO_DATABASE=findit_db
 
-#### A. Siapkan Database PostgreSQL
-1. Buka terminal (PowerShell, CMD, atau Bash).
-2. Buat database baru bernama **`findit_db`** langsung dari terminal menggunakan `psql`:
+REDIS_ADDR=localhost:6379
+JWT_SECRET=rahasia-minimal-32-karakter-harus-panjang-dan-aman!
+```
 
-   *Di Windows (PowerShell):*
-   ```powershell
-   
-   # Buat database findit_db:
-   psql -U postgres -h localhost -p 5432 -c "CREATE DATABASE findit_db;"
-   ```
-
-   *Di Linux / macOS / Git Bash:*
-   ```bash
-   psql -U postgres -h localhost -p 5432 -c "CREATE DATABASE findit_db;"
-   ```
-   *(Atau jika menggunakan GUI seperti DBeaver/pgAdmin, jalankan query: `CREATE DATABASE findit_db;`).*
-
-3. Eksekusi berkas migrasi SQL di folder [migrations/](file:///migrations/) secara berurutan sesuai fase pengerjaan:
-
-   *Melalui Terminal (psql):*
-   ```bash
-   # Fase 1: Modul Lifia (Wajib dijalankan pertama)
-   psql -U postgres -h localhost -p 5432 -d findit_db -f migrations/001_create_users_and_tokens.sql
-   psql -U postgres -h localhost -p 5432 -d findit_db -f migrations/002_create_rbac.sql
-   psql -U postgres -h localhost -p 5432 -d findit_db -f migrations/003_create_outbox_and_notifications.sql
-
-   # Fase 2: Modul Reta (Jalankan saat Reta mulai mengerjakan Fase 2)
-   psql -U postgres -h localhost -p 5432 -d findit_db -f migrations/004_create_categories.sql
-   psql -U postgres -h localhost -p 5432 -d findit_db -f migrations/005_create_items.sql
-
-   # Fase 3: Modul Zaskia (Jalankan saat Zaskia mulai mengerjakan Fase 3)
-   psql -U postgres -h localhost -p 5432 -d findit_db -f migrations/006_create_claims.sql
-   ```
-
-   *Periksa tabel yang berhasil terbuat via terminal:*
-   ```bash
-   psql -U postgres -h localhost -p 5432 -d findit_db -c "\dt"
-   ```
-
-   *Melalui GUI (DBeaver / pgAdmin):*
-   Buka koneksi database `findit_db`, buka berkas SQL di atas satu per satu sesuai urutan nomor `001` hingga `006`, lalu klik **Execute Script (F5)**.
-
-#### B. Siapkan Database MongoDB
-1. Pastikan service MongoDB lokal Anda aktif di port default `27017` (misal via MongoDB Compass atau service OS).
-2. **Tidak perlu membuat database atau collection manual**, karena aplikasi FindIt API akan otomatis membuat database `findit_db` beserta index collection `reputation_logs` & `verifications` saat aplikasi pertama kali dijalankan via programmatic `EnsureIndexes(ctx)`.
-
-#### C. Siapkan Redis
-Pastikan service Redis berjalan di port default `6379`. Jika tidak memiliki instalasi Redis lokal di Windows, Anda bisa menjalankannya lewat satu perintah Docker singkat:
+### 3. Setup Database & Migrasi SQL
+Buat database `findit_db` di PostgreSQL, lalu jalankan seluruh migrasi secara berurutan:
 ```bash
-docker run -d --name findit-redis -p 6379:6379 redis:7-alpine
+# Buat database (jika belum ada)
+psql -U postgres -h localhost -p 5432 -c "CREATE DATABASE findit_db;"
+
+# Jalankan skrip migrasi 001 s/d 006
+psql -U postgres -h localhost -p 5432 -d findit_db -f migrations/001_create_users_and_tokens.sql
+psql -U postgres -h localhost -p 5432 -d findit_db -f migrations/002_create_rbac.sql
+psql -U postgres -h localhost -p 5432 -d findit_db -f migrations/003_create_outbox_and_notifications.sql
+psql -U postgres -h localhost -p 5432 -d findit_db -f migrations/004_create_categories.sql
+psql -U postgres -h localhost -p 5432 -d findit_db -f migrations/005_create_items.sql
+psql -U postgres -h localhost -p 5432 -d findit_db -f migrations/006_create_claims.sql
 ```
+*(Collection dan indeks MongoDB dibuat otomatis oleh aplikasi saat pertama kali start).*
 
----
+### 4. Menjalankan Server Aplikasi & Akses Swagger UI
 
-### Langkah 4: Konfigurasi Berkas Lingkungan (`.env`)
+Pilih salah satu mode server sesuai kebutuhan:
 
-1. Salin berkas [.env.example](file:///.env.example) menjadi `.env`:
-   - **Windows (PowerShell):**
-     ```powershell
-     Copy-Item .env.example .env
-     ```
-   - **Linux / macOS / Git Bash:**
-     ```bash
-     cp .env.example .env
-     ```
-2. Buka berkas `.env` yang baru dibuat dengan teks editor Anda, lalu sesuaikan bagian kredensial database lokal (terutama password PostgreSQL Anda):
-   ```env
-   APP_NAME="FindIt API - Lost and Found Portal"
-   APP_PORT=3000
-   APP_ROLE=all
-   SWAGGER_ENABLED=true
+- **Mode 1: Full Server (HTTP API + Background Worker) — Default**
+  ```bash
+  go run .
+  # atau
+  go run . -role=all
+  ```
+  *Membutuhkan Redis aktif.*
 
-   # Sesuaikan dengan user & password PostgreSQL komputermu:
-   DB_HOST=localhost
-   DB_PORT=5432
-   DB_USER=postgres
-   DB_PASSWORD=isi_password_postgres_kamu_disini
-   DB_NAME=findit_db
-   DB_SSLMODE=disable
-   DB_MAX_CONNS=10
+- **Mode 2: Hanya HTTP API (Tanpa Redis)**
+  ```bash
+  go run . -role=api
+  ```
+  *Gunakan mode ini jika Anda hanya ingin menguji endpoint HTTP & Swagger tanpa menyalakan Redis.*
 
-   # MongoDB
-   MONGO_URI=mongodb://localhost:27017
-   MONGO_DATABASE=findit_db
-   MONGO_MAX_POOL=20
+- **Mode 3: Hanya Worker Notifikasi Latar Belakang**
+  ```bash
+  go run . -role=worker
+  ```
 
-   # Redis & Background Worker
-   REDIS_ADDR=localhost:6379
-   REDIS_PASSWORD=
-   REDIS_DB=0
-   WORKER_CONCURRENCY=5
-   RELAY_INTERVAL_MS=1000
-   RELAY_BATCH=100
-   MAILER_DELAY_MS=1500
-   MAILER_FAIL_EVERY=0
+#### Akses Dokumentasi Interaktif Swagger UI
+Setelah server berjalan, dokumentasi interaktif seluruh endpoint API dapat langsung diakses melalui browser:
+- **Swagger UI**: [http://localhost:3000/swagger/index.html](http://localhost:3000/swagger/index.html)
+- **OpenAPI Spec (JSON)**: [http://localhost:3000/swagger/doc.json](http://localhost:3000/swagger/doc.json)
 
-   # JWT & Keamanan
-   JWT_SECRET=rahasia-minimal-32-karakter-harus-panjang-dan-aman!
-   JWT_ISSUER=findit-api
-   JWT_ACCESS_TTL_MINUTES=60
-   JWT_REFRESH_TTL_DAYS=7
-   ALLOWED_ORIGINS=*
-   LOG_LEVEL=info
-   ```
+> **Catatan:**
+> - Fitur Swagger dikendalikan melalui `SWAGGER_ENABLED=true` pada berkas `.env` (di lingkungan *production*, sebaiknya disetel ke `false` demi keamanan).
+> - Untuk memperbarui dokumentasi setelah mengubah anotasi godoc pada layer service:
+>   ```bash
+>   swag init -g main.go -o docs
+>   ```
 
----
-
-### Langkah 5: Verifikasi Kompilasi & Pengujian
-
-Sebelum menjalankan server, pastikan tidak ada error kompilasi dan seluruh unit test lulus:
-
-1. **Uji Kompilasi Kode:**
-   ```bash
-   go build ./...
-   ```
-   *(Harus selesai tanpa menampilkan pesan error apa pun).*
-
-2. **Jalankan Seluruh Test:**
-   ```bash
-   go test -v -cover ./...
-   ```
-   *(Seluruh fungsi test rules, worker idempoten, dan auth-reputation harus berstatus **PASS**).*
-
----
-
-### Langkah 6: Menjalankan Server Aplikasi
-
-Jalankan perintah berikut di root folder proyek:
-
-#### Mode 1: Penuh (HTTP API + Worker Asinkron) — Direkomendasikan
-```bash
-go run .
-# atau
-go run . -role=all
-```
-- Server HTTP aktif di `http://localhost:3000`.
-- Outbox Relay dan Worker notifikasi aktif memproses antrian Redis di latar belakang.
-
-#### Mode 2: Hanya HTTP API (Tanpa Redis/Worker)
-```bash
-go run . -role=api
-```
-*(Gunakan mode ini jika Redis di komputermu sedang tidak aktif dan kamu hanya ingin menguji endpoint HTTP biasa).*
-
-#### Mode 3: Hanya Worker Latar Belakang
-```bash
-go run . -role=worker
-```
-
----
-
-### Langkah 7: Verifikasi Kesehatan Sistem (Health Check)
-
-Buka browser atau terminal baru untuk memastikan PostgreSQL dan MongoDB telah terhubung dengan benar:
+### 5. Verifikasi Status Server (Health Check)
 ```bash
 curl http://localhost:3000/api/v1/health
 ```
-
-Respons JSON yang menandakan setup berhasil 100%:
+Respons sukses:
 ```json
 {
   "success": true,
@@ -242,42 +126,26 @@ Respons JSON yang menandakan setup berhasil 100%:
 
 ---
 
-## 🔑 Utilitas Pengujian Cepat: Generate Token JWT
+## 🧪 Pengujian & Utilitas CLI
 
-Untuk memudahkan pengujian endpoint yang dilindungi autentikasi/izin RBAC (misal di Postman) tanpa perlu register dan login berulang kali, gunakan tool CLI yang sudah disediakan di folder `tools/`:
-
+### A. Menjalankan Unit Test
 ```bash
-# 1. Generate Token untuk Akun Admin (user_id: 1, role: admin)
-go run ./tools/gentoken -user=1 -role=admin
-
-# 2. Generate Token untuk Mahasiswa Biasa (user_id: 2, role: user)
-go run ./tools/gentoken -user=2 -role=user
+go test -v -cover ./...
 ```
 
-Gunakan token yang muncul di layar sebagai header permintaan di Postman:
-`Authorization: Bearer <TOKEN_HASIL_GENERATE>`
+### B. Generate Token Pengujian Instan (`tools/gentoken`)
+Generate token JWT tanpa perlu registrasi manual di Postman:
+```bash
+# Token Admin (user_id: 1)
+go run ./tools/gentoken -user=1 -role=admin
 
----
+# Token Mahasiswa Biasa (user_id: 2)
+go run ./tools/gentoken -user=2 -role=user
+```
+Gunakan token pada header request: `Authorization: Bearer <TOKEN>`.
 
-## 🌿 Tata Cara Kolaborasi Git Tim
-
-1. **Selalu Update Branch dari `main` Sebelum Menulis Kode Baru:**
-   ```bash
-   git checkout <branch-kamu>
-   git pull origin main
-   ```
-2. **Jangan Mengubah Berkas Anggota Lain:**
-   - Lifia fokus pada `User`, `Auth`, `RBAC`, `Reputation`, dan `Worker`.
-   - Reta fokus pada `Category` dan `Item`.
-   - Zaskia fokus pada `Claim` dan `Verification`.
-3. **Lakukan Micro-Commits Berurutan:**
-   Commit setiap detail langkah sesuai panduan di modul `Lap PBL Prak.docx`.
-4. **Buat Pull Request (PR):**
-   Setelah fitur selesai dan lolos `go build ./...`, push ke branch Anda di GitHub lalu buat Pull Request ke `main` untuk direview oleh Git Master (Lifia).
-
----
-
-## 📖 Panduan Lengkap Perkuliahan
-
-Seluruh rancangan kode lengkap per anggota, skema arsitektur, panduan Swagger, load test konkurensi, dan format penyusunan laporan akhir tugas ada di dalam:
-- **[Lap PBL Prak.docx](file:///d:/Go/FindIT-API/Lap%20PBL%20Prak.docx)**
+### C. Concurrency Load Test OCC (`tools/loadtest_claim`)
+Uji ketahanan race condition Optimistic Concurrency Control (OCC) saat beberapa worker meng-approve klaim secara bersamaan:
+```bash
+go run ./tools/loadtest_claim -item=2 -workers=10
+```

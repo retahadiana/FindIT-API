@@ -44,6 +44,17 @@ func BadgeForScore(score int) string {
 	}
 }
 
+// GetUserReputation godoc
+//
+// @Summary Ambil skor reputasi dan riwayat log pengguna
+// @Description Mengambil skor trust score, badge level, total barang dikembalikan, dan riwayat ulasan dari MongoDB.
+// @Tags reputation
+// @Produce json
+// @Param id path int true "ID Pengguna"
+// @Success 200 {object} model.WebResponse{data=model.UserReputationResponse}
+// @Failure 400 {object} model.ErrorResponse "ID user harus berupa angka positif"
+// @Failure 404 {object} model.ErrorResponse "User tidak ditemukan"
+// @Router /users/{id}/reputation [get]
 func (s *ReputationService) GetUserReputation(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -80,6 +91,23 @@ func (s *ReputationService) GetUserReputation(c *fiber.Ctx) error {
 	})
 }
 
+// AddReward godoc
+//
+// @Summary Berikan reward poin reputasi dan feedback
+// @Description Menambahkan poin reputasi kejujuran dan ulasan bintang/komentar atas pengembalian barang.
+// @Tags reputation
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID Pengguna Penerima Reward"
+// @Param body body model.AddReputationRequest true "Detail poin dan feedback"
+// @Success 201 {object} model.WebResponse
+// @Failure 400 {object} model.ErrorResponse "Data tidak valid"
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Failure 403 {object} model.ErrorResponse "Tidak boleh memberi reward ke diri sendiri"
+// @Failure 404 {object} model.ErrorResponse "User tidak ditemukan"
+// @Failure 409 {object} model.ErrorResponse "Reward untuk klaim ini sudah pernah diberikan"
+// @Router /users/{id}/reward [post]
 func (s *ReputationService) AddReward(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -152,7 +180,16 @@ func (s *ReputationService) AddReward(c *fiber.Ctx) error {
 	})
 }
 
-
+// Summary godoc
+//
+// @Summary Ringkasan distribusi rating reputasi
+// @Description Mengambil ringkasan statistik rating bintang pengguna via MongoDB aggregation $facet.
+// @Tags reputation
+// @Produce json
+// @Param id path int true "ID Pengguna"
+// @Success 200 {object} model.WebResponse{data=model.ReputationSummary}
+// @Failure 400 {object} model.ErrorResponse "ID user harus berupa angka positif"
+// @Router /users/{id}/reputation/summary [get]
 func (s *ReputationService) Summary(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()

@@ -24,6 +24,23 @@ func NewClaimService(claims repository.ClaimRepository, items repository.ItemRep
 	return &ClaimService{claims: claims, items: items, outbox: outbox, tx: tx}
 }
 
+// Create godoc
+//
+// @Summary Ajukan klaim barang temuan
+// @Description Mengajukan klaim kepemilikan atas suatu barang temuan yang berstatus open. Memicu outbox event claim.submitted.
+// @Tags claims
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID Barang Temuan"
+// @Param body body model.CreateClaimRequest true "Deskripsi bukti kepemilikan"
+// @Success 201 {object} model.WebResponse{data=model.Claim}
+// @Failure 400 {object} model.ErrorResponse "Data atau ID tidak valid"
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Failure 403 {object} model.ErrorResponse "Tidak boleh mengklaim barang temuan sendiri"
+// @Failure 404 {object} model.ErrorResponse "Barang tidak ditemukan"
+// @Failure 409 {object} model.ErrorResponse "Bukan barang temuan open atau klaim sudah diajukan sebelumnya"
+// @Router /items/{id}/claims [post]
 func (s *ClaimService) Create(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -76,6 +93,19 @@ func (s *ClaimService) Create(c *fiber.Ctx) error {
 	return helper.Created(c, "klaim berhasil diajukan", created, "/api/v1/claims/"+strconv.Itoa(created.ID))
 }
 
+// Get godoc
+//
+// @Summary Detail klaim berdasarkan ID
+// @Description Mengambil rincian informasi klaim barang.
+// @Tags claims
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID Klaim"
+// @Success 200 {object} model.WebResponse{data=model.Claim}
+// @Failure 400 {object} model.ErrorResponse "ID klaim tidak valid"
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Failure 404 {object} model.ErrorResponse "Klaim tidak ditemukan"
+// @Router /claims/{id} [get]
 func (s *ClaimService) Get(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -90,6 +120,20 @@ func (s *ClaimService) Get(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "detail klaim ditemukan", claim)
 }
 
+// ListByItem godoc
+//
+// @Summary Daftar klaim masuk untuk suatu barang temuan
+// @Description Menampilkan seluruh pengajuan klaim untuk barang temuan tertentu. Hanya dapat diakses oleh penemu barang tersebut atau admin.
+// @Tags claims
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID Barang Temuan"
+// @Success 200 {object} model.WebResponse{data=[]model.Claim}
+// @Failure 400 {object} model.ErrorResponse "ID barang tidak valid"
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Failure 403 {object} model.ErrorResponse "Bukan penemu barang atau admin"
+// @Failure 404 {object} model.ErrorResponse "Barang tidak ditemukan"
+// @Router /items/{id}/claims [get]
 func (s *ClaimService) ListByItem(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -115,6 +159,16 @@ func (s *ClaimService) ListByItem(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "daftar klaim berhasil diambil", list)
 }
 
+// MyClaims godoc
+//
+// @Summary Riwayat klaim milik pengguna yang login
+// @Description Menampilkan riwayat klaim barang yang pernah diajukan oleh pengguna aktif.
+// @Tags claims
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} model.WebResponse{data=[]model.Claim}
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Router /claims/me [get]
 func (s *ClaimService) MyClaims(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -129,6 +183,23 @@ func (s *ClaimService) MyClaims(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "riwayat klaim Anda", list)
 }
 
+// UpdateStatus godoc
+//
+// @Summary Ubah status klaim (Approved / Rejected / Cancelled) dengan OCC
+// @Description Mengubah status pengajuan klaim. Jika approved, status barang diubah menjadi returned menggunakan Optimistic Concurrency Control (OCC) dan memicu event outbox.
+// @Tags claims
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID Klaim"
+// @Param body body model.UpdateClaimStatusRequest true "Status baru (approved, rejected, cancelled)"
+// @Success 200 {object} model.WebResponse{data=model.Claim}
+// @Failure 400 {object} model.ErrorResponse "ID atau payload tidak valid"
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Failure 403 {object} model.ErrorResponse "Tidak memiliki hak memproses klaim"
+// @Failure 404 {object} model.ErrorResponse "Klaim atau barang tidak ditemukan"
+// @Failure 409 {object} model.ErrorResponse "Klaim sudah diproses atau terjadi konflik OCC versi barang"
+// @Router /claims/{id}/status [patch]
 func (s *ClaimService) UpdateStatus(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()

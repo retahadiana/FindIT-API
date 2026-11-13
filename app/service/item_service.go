@@ -22,6 +22,22 @@ func NewItemService(items repository.ItemRepository, categories repository.Categ
 	return &ItemService{items: items, categories: categories}
 }
 
+// List godoc
+//
+// @Summary Daftar laporan barang (Lost / Found)
+// @Description Menampilkan daftar laporan barang dengan filter tipe (lost/found), status (open/resolved/returned), kategori, serta mendukung pagination berbasis halaman, cursor, maupun ekspor CSV.
+// @Tags items
+// @Produce json
+// @Produce text/csv
+// @Param type query string false "Filter tipe: lost atau found"
+// @Param status query string false "Filter status: open, claimed, returned, resolved"
+// @Param category_id query int false "Filter berdasarkan ID kategori"
+// @Param page query int false "Nomor halaman (default 1)"
+// @Param limit query int false "Batas item per halaman (default 20, maks 100)"
+// @Param search query string false "Kata kunci judul atau deskripsi"
+// @Param after query string false "Cursor untuk cursor-based pagination"
+// @Success 200 {object} model.WebResponse{data=[]model.Item}
+// @Router /items [get]
 func (s *ItemService) List(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -82,6 +98,17 @@ func (s *ItemService) List(c *fiber.Ctx) error {
 	})
 }
 
+// Get godoc
+//
+// @Summary Detail laporan barang
+// @Description Mengambil rincian informasi satu barang berdasarkan ID.
+// @Tags items
+// @Produce json
+// @Param id path int true "ID Barang"
+// @Success 200 {object} model.WebResponse{data=model.Item}
+// @Failure 400 {object} model.ErrorResponse "ID barang tidak valid"
+// @Failure 404 {object} model.ErrorResponse "Barang tidak ditemukan"
+// @Router /items/{id} [get]
 func (s *ItemService) Get(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -100,6 +127,20 @@ func (s *ItemService) Get(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "detail barang ditemukan", item)
 }
 
+// Create godoc
+//
+// @Summary Buat laporan barang hilang atau temuan
+// @Description Mendaftarkan laporan kehilangan (lost) atau penemuan barang (found).
+// @Tags items
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body model.CreateItemRequest true "Data laporan barang"
+// @Success 201 {object} model.WebResponse{data=model.Item}
+// @Failure 400 {object} model.ErrorResponse "Body bukan JSON valid atau kategori tidak ditemukan"
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Failure 422 {object} model.ErrorResponse "Validasi gagal"
+// @Router /items [post]
 func (s *ItemService) Create(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -138,6 +179,22 @@ func (s *ItemService) Create(c *fiber.Ctx) error {
 		"/api/v1/items/"+strconv.Itoa(created.ID))
 }
 
+// Update godoc
+//
+// @Summary Perbarui laporan barang
+// @Description Memperbarui informasi laporan barang milik sendiri atau oleh admin.
+// @Tags items
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID Barang"
+// @Param body body model.UpdateItemRequest true "Data pembaruan laporan"
+// @Success 200 {object} model.WebResponse{data=model.Item}
+// @Failure 400 {object} model.ErrorResponse "Data atau ID tidak valid"
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Failure 403 {object} model.ErrorResponse "Bukan pemilik atau admin"
+// @Failure 404 {object} model.ErrorResponse "Barang tidak ditemukan"
+// @Router /items/{id} [put]
 func (s *ItemService) Update(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -171,6 +228,19 @@ func (s *ItemService) Update(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "laporan barang berhasil diperbarui", updated)
 }
 
+// Delete godoc
+//
+// @Summary Hapus laporan barang
+// @Description Menghapus postingan barang yang dibuat oleh pengguna atau oleh admin.
+// @Tags items
+// @Security BearerAuth
+// @Param id path int true "ID Barang"
+// @Success 204 "Berhasil dihapus tanpa body"
+// @Failure 400 {object} model.ErrorResponse "ID barang tidak valid"
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Failure 403 {object} model.ErrorResponse "Tidak berhak menghapus"
+// @Failure 404 {object} model.ErrorResponse "Barang tidak ditemukan"
+// @Router /items/{id} [delete]
 func (s *ItemService) Delete(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()

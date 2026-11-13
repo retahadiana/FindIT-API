@@ -18,6 +18,23 @@ func NewVerificationService(verif repository.VerificationRepository, claims repo
 	return &VerificationService{verif: verif, claims: claims, items: items}
 }
 
+// CreateSession godoc
+//
+// @Summary Buat sesi pertanyaan verifikasi rahasia (Penemu)
+// @Description Penemu barang membuat daftar pertanyaan ciri khusus rahasia (maksimal 10 pertanyaan disimpan di MongoDB) untuk dijawab oleh pengklaim.
+// @Tags verifications
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID Klaim"
+// @Param body body model.SubmitQARequest true "Daftar pertanyaan verifikasi"
+// @Success 201 {object} model.WebResponse{data=model.VerificationSession}
+// @Failure 400 {object} model.ErrorResponse "ID klaim atau payload tidak valid"
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Failure 403 {object} model.ErrorResponse "Hanya penemu barang yang berhak membuat sesi"
+// @Failure 404 {object} model.ErrorResponse "Klaim tidak ditemukan"
+// @Failure 409 {object} model.ErrorResponse "Sesi verifikasi untuk klaim ini sudah ada atau klaim bukan pending"
+// @Router /claims/{id}/verification [post]
 func (s *VerificationService) CreateSession(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -60,6 +77,18 @@ func (s *VerificationService) CreateSession(c *fiber.Ctx) error {
 	return helper.Created(c, "sesi verifikasi dibuat", created, "")
 }
 
+// GetSession godoc
+//
+// @Summary Ambil sesi verifikasi tanya-jawab ciri khusus
+// @Description Mengambil data sesi tanya-jawab ciri khusus barang dari MongoDB berdasarkan ID klaim.
+// @Tags verifications
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID Klaim"
+// @Success 200 {object} model.WebResponse{data=model.VerificationSession}
+// @Failure 400 {object} model.ErrorResponse "ID klaim tidak valid"
+// @Failure 404 {object} model.ErrorResponse "Sesi verifikasi tidak ditemukan"
+// @Router /claims/{id}/verification [get]
 func (s *VerificationService) GetSession(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -74,6 +103,22 @@ func (s *VerificationService) GetSession(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "sesi verifikasi ditemukan", session)
 }
 
+// AnswerQuestions godoc
+//
+// @Summary Jawab pertanyaan verifikasi (Pengklaim)
+// @Description Pengklaim menjawab pertanyaan-pertanyaan ciri khusus yang diajukan oleh penemu.
+// @Tags verifications
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID Klaim"
+// @Param body body model.SubmitQARequest true "Jawaban atas pertanyaan verifikasi"
+// @Success 200 {object} model.WebResponse{data=model.VerificationSession}
+// @Failure 400 {object} model.ErrorResponse "ID klaim atau payload tidak valid"
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Failure 403 {object} model.ErrorResponse "Hanya pengklaim yang berhak menjawab pertanyaan"
+// @Failure 404 {object} model.ErrorResponse "Sesi verifikasi tidak ditemukan"
+// @Router /claims/{id}/verification/answers [put]
 func (s *VerificationService) AnswerQuestions(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -106,6 +151,22 @@ func (s *VerificationService) AnswerQuestions(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "jawaban verifikasi disimpan", updated)
 }
 
+// ReviewVerifications godoc
+//
+// @Summary Tinjau dan nilai hasil jawaban verifikasi (Penemu / Admin)
+// @Description Penemu atau admin menilai kebenaran jawaban pengklaim (is_verified) dan memberikan catatan rahasia.
+// @Tags verifications
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID Klaim"
+// @Param body body model.ReviewVerificationRequest true "Hasil penilaian verifikasi"
+// @Success 200 {object} model.WebResponse{data=model.VerificationSession}
+// @Failure 400 {object} model.ErrorResponse "ID klaim atau payload tidak valid"
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Failure 403 {object} model.ErrorResponse "Hanya penemu atau admin yang berhak meninjau"
+// @Failure 404 {object} model.ErrorResponse "Sesi verifikasi tidak ditemukan"
+// @Router /claims/{id}/verification/review [post]
 func (s *VerificationService) ReviewVerifications(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()

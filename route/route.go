@@ -9,6 +9,7 @@ import (
 	"findit-api/middleware"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/swagger"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -25,13 +26,21 @@ type Dependencies struct {
 	NotificationService *service.NotificationService // [Lifia]
 	CategoryService     *service.CategoryService     // [Reta]
 	ItemService         *service.ItemService         // [Reta]
+	ClaimService        *service.ClaimService        // [Zaskia]
+	VerificationService *service.VerificationService // [Zaskia]
+	EnableSwagger       bool
 }
 
-// Register mendaftarkan seluruh endpoint API FindIt modul Fase 1 ke Fiber app.
+// Register mendaftarkan seluruh endpoint API FindIt ke Fiber app.
 func Register(app *fiber.App, deps Dependencies) {
+	if deps.EnableSwagger {
+		app.Get("/swagger/*", swagger.HandlerDefault)
+	}
+
 	api := app.Group("/api/v1")
 	api.Get("/health", healthCheck(deps.Pool, deps.Mongo))
 
+	// Fase 1 — Auth, RBAC, User, Reputasi & Notifikasi (Lifia)
 	if deps.AuthService != nil {
 		auth := api.Group("/auth", middleware.RequireJSON)
 		auth.Post("/register", deps.AuthService.Register)
@@ -83,6 +92,25 @@ func Register(app *fiber.App, deps Dependencies) {
 		items.Put("/:id", middleware.RequireAuth(deps.JWT), middleware.RequireJSON,
 			deps.ItemService.Update)
 		items.Delete("/:id", middleware.RequireAuth(deps.JWT), deps.ItemService.Delete)
+	}
+
+	// Fase 3 — Claims & Verification (Zaskia)
+	if deps.ClaimService != nil {
+		claims := api.Group("/claims", middleware.RequireAuth(deps.JWT))
+		claims.Get("/me", deps.ClaimService.MyClaims)
+		claims.Get("/:id", deps.ClaimService.Get)
+		claims.Patch("/:id/status", middleware.RequireJSON, deps.ClaimService.UpdateStatus)
+
+		api.Post("/items/:id/claims", middleware.RequireAuth(deps.JWT), middleware.RequireJSON, deps.ClaimService.Create)
+		api.Get("/items/:id/claims", middleware.RequireAuth(deps.JWT), deps.ClaimService.ListByItem)
+	}
+
+	if deps.VerificationService != nil {
+		verif := api.Group("/claims/:id/verification", middleware.RequireAuth(deps.JWT))
+		verif.Get("/", deps.VerificationService.GetSession)
+		verif.Post("/", middleware.RequireJSON, deps.VerificationService.CreateSession)
+		verif.Put("/answers", middleware.RequireJSON, deps.VerificationService.AnswerQuestions)
+		verif.Post("/review", middleware.RequireJSON, deps.VerificationService.ReviewVerifications)
 	}
 }
 

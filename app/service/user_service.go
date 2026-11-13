@@ -21,6 +21,21 @@ func NewUserService(users repository.UserRepository, perms *helper.PermissionSet
 	return &UserService{users: users, perms: perms}
 }
 
+// List godoc
+//
+// @Summary Daftar pengguna terpaginasi atau CSV
+// @Description Menampilkan daftar pengguna dengan cursor pagination atau ekspor CSV melalui header Accept.
+// @Tags users
+// @Produce json
+// @Produce text/csv
+// @Security BearerAuth
+// @Param cursor query string false "Cursor untuk navigasi halaman berikutnya"
+// @Param limit query int false "Batas jumlah data per halaman (default 20, maks 100)"
+// @Param search query string false "Pencarian nama atau username"
+// @Success 200 {object} model.WebResponse{data=[]model.User}
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Failure 403 {object} model.ErrorResponse "Tidak memiliki izin user:list"
+// @Router /users [get]
 func (s *UserService) List(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -60,6 +75,20 @@ func (s *UserService) List(c *fiber.Ctx) error {
 	})
 }
 
+// GetByID godoc
+//
+// @Summary Ambil data pengguna berdasarkan ID
+// @Description Mengambil informasi profil pengguna tertentu berdasarkan ID.
+// @Tags users
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID Pengguna"
+// @Success 200 {object} model.WebResponse{data=model.User}
+// @Failure 400 {object} model.ErrorResponse "ID user tidak valid"
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Failure 403 {object} model.ErrorResponse "Hanya boleh melihat profil sendiri"
+// @Failure 404 {object} model.ErrorResponse "User tidak ditemukan"
+// @Router /users/{id} [get]
 func (s *UserService) GetByID(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -84,6 +113,22 @@ func (s *UserService) GetByID(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "user ditemukan", user)
 }
 
+// Create godoc
+//
+// @Summary Buat pengguna baru oleh admin/staff
+// @Description Menambahkan pengguna baru secara langsung ke database.
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body model.CreateUserRequest true "Data pengguna baru"
+// @Success 201 {object} model.WebResponse{data=model.User}
+// @Failure 400 {object} model.ErrorResponse "Body harus JSON valid"
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Failure 403 {object} model.ErrorResponse "Tidak memiliki izin"
+// @Failure 409 {object} model.ErrorResponse "Username atau email sudah dipakai"
+// @Failure 422 {object} model.ErrorResponse "Validasi gagal"
+// @Router /users [post]
 func (s *UserService) Create(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -115,6 +160,20 @@ func (s *UserService) Create(c *fiber.Ctx) error {
 	return helper.Created(c, "user berhasil dibuat", created, "/api/v1/users/"+strconv.Itoa(created.ID))
 }
 
+// UpdateProfile godoc
+//
+// @Summary Perbarui profil diri sendiri
+// @Description Mengubah nama lengkap dan nomor telepon akun yang sedang login.
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body model.UpdateUserRequest true "Data pembaruan profil"
+// @Success 200 {object} model.WebResponse{data=model.User}
+// @Failure 400 {object} model.ErrorResponse "Body bukan JSON valid"
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Failure 422 {object} model.ErrorResponse "Validasi gagal"
+// @Router /users/profile [put]
 func (s *UserService) UpdateProfile(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -136,6 +195,23 @@ func (s *UserService) UpdateProfile(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "profil berhasil diperbarui", updated)
 }
 
+// Replace godoc
+//
+// @Summary Ganti seluruh atribut data pengguna (PUT)
+// @Description Mengganti atribut profil pengguna secara utuh berdasarkan ID.
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID Pengguna"
+// @Param body body model.ReplaceUserRequest true "Data lengkap pengguna"
+// @Success 200 {object} model.WebResponse{data=model.User}
+// @Failure 400 {object} model.ErrorResponse "ID atau body tidak valid"
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Failure 403 {object} model.ErrorResponse "Tidak memiliki izin"
+// @Failure 404 {object} model.ErrorResponse "User tidak ditemukan"
+// @Failure 409 {object} model.ErrorResponse "Username atau email sudah dipakai"
+// @Router /users/{id} [put]
 func (s *UserService) Replace(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -165,6 +241,22 @@ func (s *UserService) Replace(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "user berhasil diperbarui", updated)
 }
 
+// Patch godoc
+//
+// @Summary Perbarui sebagian data pengguna (PATCH)
+// @Description Memperbarui sebagian field profil pengguna (partial update).
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID Pengguna"
+// @Param body body model.PatchUserRequest true "Field yang akan diperbarui"
+// @Success 200 {object} model.WebResponse{data=model.User}
+// @Failure 400 {object} model.ErrorResponse "Minimal satu field harus diisi atau ID tidak valid"
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Failure 403 {object} model.ErrorResponse "Tidak memiliki izin"
+// @Failure 404 {object} model.ErrorResponse "User tidak ditemukan"
+// @Router /users/{id} [patch]
 func (s *UserService) Patch(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -194,6 +286,22 @@ func (s *UserService) Patch(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "user berhasil di-patch", updated)
 }
 
+// AssignRole godoc
+//
+// @Summary Ubah peran pengguna (Assign Role)
+// @Description Mengubah level kewenangan role pengguna (admin/staff/user).
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID Pengguna"
+// @Param body body model.AssignRoleRequest true "Peran baru"
+// @Success 200 {object} model.WebResponse{data=model.User}
+// @Failure 400 {object} model.ErrorResponse "Body bukan JSON valid atau role tidak dikenal"
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Failure 403 {object} model.ErrorResponse "Tidak memiliki izin role:assign atau tidak boleh mengubah role diri sendiri"
+// @Failure 404 {object} model.ErrorResponse "User tidak ditemukan"
+// @Router /users/{id}/role [patch]
 func (s *UserService) AssignRole(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
@@ -222,6 +330,19 @@ func (s *UserService) AssignRole(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "role user berhasil diubah", updated)
 }
 
+// Delete godoc
+//
+// @Summary Hapus pengguna
+// @Description Menghapus data akun pengguna dari sistem secara permanen.
+// @Tags users
+// @Security BearerAuth
+// @Param id path int true "ID Pengguna"
+// @Success 204 "Berhasil dihapus tanpa body"
+// @Failure 400 {object} model.ErrorResponse "ID user tidak valid"
+// @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
+// @Failure 403 {object} model.ErrorResponse "Tidak memiliki izin user:delete"
+// @Failure 404 {object} model.ErrorResponse "User tidak ditemukan"
+// @Router /users/{id} [delete]
 func (s *UserService) Delete(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
