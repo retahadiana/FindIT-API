@@ -9,6 +9,7 @@ import (
 	"findit-api/middleware"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/swagger"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -27,13 +28,19 @@ type Dependencies struct {
 	ItemService         *service.ItemService         // [Reta]
 	ClaimService        *service.ClaimService        // [Zaskia]
 	VerificationService *service.VerificationService // [Zaskia]
+	EnableSwagger       bool
 }
 
-// Register mendaftarkan seluruh endpoint API FindIt modul Fase 1 ke Fiber app.
+// Register mendaftarkan seluruh endpoint API FindIt ke Fiber app.
 func Register(app *fiber.App, deps Dependencies) {
+	if deps.EnableSwagger {
+		app.Get("/swagger/*", swagger.HandlerDefault)
+	}
+
 	api := app.Group("/api/v1")
 	api.Get("/health", healthCheck(deps.Pool, deps.Mongo))
 
+	// Fase 1 — Auth, RBAC, User, Reputasi & Notifikasi (Lifia)
 	if deps.AuthService != nil {
 		auth := api.Group("/auth", middleware.RequireJSON)
 		auth.Post("/register", deps.AuthService.Register)
