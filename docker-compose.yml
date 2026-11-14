@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: findit_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Inisialisasi otomatis skema tabel 001 s/d 006 saat volume database masih kosong:
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d findit_db"]
+      interval: 5s
+      retries: 5
+
+  mongo:
+    image: mongo:8
+    restart: unless-stopped
+    volumes:
+      - mongodata:/data/db
+    ports: ["27017:27017"]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    ports: ["6379:6379"]
+
+  api:
+    build: .
+    restart: unless-stopped
+    command: ["-role=api"]
+    env_file: .env
+    environment:
+      DB_HOST: postgres
+      MONGO_URI: mongodb://mongo:27017
+      REDIS_ADDR: redis:6379
+    ports: ["3000:3000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      mongo: { condition: service_started }
+      redis: { condition: service_started }
+
+  worker:
+    build: .
+    restart: unless-stopped
+    command: ["-role=worker"]
+    env_file: .env
+    environment:
+      DB_HOST: postgres
+      REDIS_ADDR: redis:6379
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_started }
+
+volumes:
+  pgdata:
+  mongodata:
+  redisdata:
+
