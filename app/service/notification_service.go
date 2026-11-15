@@ -38,6 +38,9 @@ func (s *NotificationService) Mine(c *fiber.Ctx) error {
 		return helper.Unauthorized("belum terautentikasi")
 	}
 	limit := c.QueryInt("limit", 20)
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
 	list, err := s.notifications.FindByUser(ctx, user.UserID, limit)
 	if err != nil {
 		return helper.Internal(err)

@@ -11,10 +11,12 @@ CREATE TABLE IF NOT EXISTS items (
     status VARCHAR(20) DEFAULT 'open' NOT NULL CHECK (status IN ('open', 'claimed', 'returned', 'closed')),
     version INT NOT NULL DEFAULT 1,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_items_type_status ON items(item_type, status);
 CREATE INDEX IF NOT EXISTS idx_items_category ON items(category_id);
 CREATE INDEX IF NOT EXISTS idx_items_cursor ON items(created_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_items_deleted_at ON items(deleted_at);
 

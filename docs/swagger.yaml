@@ -6,22 +6,13 @@ definitions:
         minimum: 1
         type: integer
       feedback:
-        $ref: '#/definitions/model.Feedback'
-      item_id:
-        minimum: 1
-        type: integer
-      points:
-        maximum: 100
-        minimum: 1
-        type: integer
+        $ref: '#/definitions/model.FeedbackInput'
       reason:
         maxLength: 255
         minLength: 3
         type: string
     required:
     - claim_id
-    - item_id
-    - points
     - reason
     type: object
   model.AssignRoleRequest:
@@ -111,7 +102,6 @@ definitions:
     required:
     - category_id
     - description
-    - event_date
     - item_type
     - location
     - title
@@ -148,6 +138,17 @@ definitions:
     - password
     - username
     type: object
+  model.CreateVerificationSessionRequest:
+    properties:
+      questions:
+        items:
+          $ref: '#/definitions/model.VerificationQuestionItem'
+        maxItems: 10
+        minItems: 1
+        type: array
+    required:
+    - questions
+    type: object
   model.ErrorResponse:
     properties:
       code:
@@ -177,6 +178,18 @@ definitions:
     required:
     - rating
     type: object
+  model.FeedbackInput:
+    properties:
+      comment:
+        maxLength: 500
+        type: string
+      rating:
+        maximum: 5
+        minimum: 1
+        type: integer
+    required:
+    - rating
+    type: object
   model.Item:
     properties:
       category_id:
@@ -184,6 +197,8 @@ definitions:
       category_name:
         type: string
       created_at:
+        type: string
+      deleted_at:
         type: string
       description:
         type: string
@@ -388,16 +403,16 @@ definitions:
       is_verified:
         type: boolean
     type: object
-  model.SubmitQARequest:
+  model.SubmitAnswersRequest:
     properties:
-      questions:
+      answers:
         items:
-          $ref: '#/definitions/model.QuestionAnswer'
+          type: string
         maxItems: 10
         minItems: 1
         type: array
     required:
-    - questions
+    - answers
     type: object
   model.TokenPair:
     properties:
@@ -434,13 +449,6 @@ definitions:
         maxLength: 150
         minLength: 3
         type: string
-      status:
-        enum:
-        - open
-        - claimed
-        - returned
-        - closed
-        type: string
       title:
         maxLength: 150
         minLength: 3
@@ -449,7 +457,6 @@ definitions:
     - category_id
     - description
     - location
-    - status
     - title
     type: object
   model.UpdateUserRequest:
@@ -468,6 +475,8 @@ definitions:
   model.User:
     properties:
       created_at:
+        type: string
+      deleted_at:
         type: string
       email:
         type: string
@@ -490,6 +499,8 @@ definitions:
     properties:
       created_at:
         type: string
+      deleted_at:
+        type: string
       email:
         type: string
       full_name:
@@ -511,6 +522,19 @@ definitions:
       username:
         type: string
     type: object
+  model.UserPublic:
+    properties:
+      full_name:
+        type: string
+      id:
+        type: integer
+      role:
+        type: string
+      trust_score:
+        type: integer
+      username:
+        type: string
+    type: object
   model.UserReputationResponse:
     properties:
       badge:
@@ -524,7 +548,16 @@ definitions:
       total_found:
         type: integer
       user:
-        $ref: '#/definitions/model.User'
+        $ref: '#/definitions/model.UserPublic'
+    type: object
+  model.VerificationQuestionItem:
+    properties:
+      question:
+        maxLength: 300
+        minLength: 3
+        type: string
+    required:
+    - question
     type: object
   model.VerificationSession:
     properties:
@@ -938,7 +971,7 @@ paths:
   /claims/{id}/verification:
     get:
       description: Mengambil data sesi tanya-jawab ciri khusus barang dari MongoDB
-        berdasarkan ID klaim.
+        berdasarkan ID klaim. Hanya penemu, pengklaim, atau admin yang berhak mengakses.
       parameters:
       - description: ID Klaim
         in: path
@@ -959,6 +992,14 @@ paths:
               type: object
         "400":
           description: ID klaim tidak valid
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Belum terautentikasi
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Tidak berhak mengakses sesi verifikasi ini
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "404":
@@ -986,7 +1027,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/model.SubmitQARequest'
+          $ref: '#/definitions/model.CreateVerificationSessionRequest'
       produces:
       - application/json
       responses:
@@ -1042,7 +1083,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/model.SubmitQARequest'
+          $ref: '#/definitions/model.SubmitAnswersRequest'
       produces:
       - application/json
       responses:
@@ -1248,7 +1289,7 @@ paths:
       - items
   /items/{id}:
     delete:
-      description: Menghapus postingan barang yang dibuat oleh pengguna atau oleh
+      description: Menghapus postingan barang secara soft delete oleh pemilik atau
         admin.
       parameters:
       - description: ID Barang
@@ -1275,9 +1316,13 @@ paths:
           description: Barang tidak ditemukan
           schema:
             $ref: '#/definitions/model.ErrorResponse'
+        "409":
+          description: Barang berstatus claimed tidak dapat dihapus
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Hapus laporan barang
+      summary: Hapus laporan barang (Soft Delete)
       tags:
       - items
     get:
@@ -1586,7 +1631,7 @@ paths:
       - users
   /users/{id}:
     delete:
-      description: Menghapus data akun pengguna dari sistem secara permanen.
+      description: Menonaktifkan data akun pengguna dari sistem secara soft delete.
       parameters:
       - description: ID Pengguna
         in: path
@@ -1605,7 +1650,8 @@ paths:
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "403":
-          description: Tidak memiliki izin user:delete
+          description: Tidak memiliki izin user:delete atau tidak boleh menghapus
+            akun sendiri
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "404":
@@ -1614,7 +1660,7 @@ paths:
             $ref: '#/definitions/model.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Hapus pengguna
+      summary: Hapus pengguna (Soft Delete)
       tags:
       - users
     get:

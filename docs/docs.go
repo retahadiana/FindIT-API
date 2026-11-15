@@ -664,7 +664,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Mengambil data sesi tanya-jawab ciri khusus barang dari MongoDB berdasarkan ID klaim.",
+                "description": "Mengambil data sesi tanya-jawab ciri khusus barang dari MongoDB berdasarkan ID klaim. Hanya penemu, pengklaim, atau admin yang berhak mengakses.",
                 "produces": [
                     "application/json"
                 ],
@@ -702,6 +702,18 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "ID klaim tidak valid",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Belum terautentikasi",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Tidak berhak mengakses sesi verifikasi ini",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -745,7 +757,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.SubmitQARequest"
+                            "$ref": "#/definitions/model.CreateVerificationSessionRequest"
                         }
                     }
                 ],
@@ -833,7 +845,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.SubmitQARequest"
+                            "$ref": "#/definitions/model.SubmitAnswersRequest"
                         }
                     }
                 ],
@@ -1250,11 +1262,11 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Menghapus postingan barang yang dibuat oleh pengguna atau oleh admin.",
+                "description": "Menghapus postingan barang secara soft delete oleh pemilik atau admin.",
                 "tags": [
                     "items"
                 ],
-                "summary": "Hapus laporan barang",
+                "summary": "Hapus laporan barang (Soft Delete)",
                 "parameters": [
                     {
                         "type": "integer",
@@ -1288,6 +1300,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Barang tidak ditemukan",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Barang berstatus claimed tidak dapat dihapus",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -1890,11 +1908,11 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Menghapus data akun pengguna dari sistem secara permanen.",
+                "description": "Menonaktifkan data akun pengguna dari sistem secara soft delete.",
                 "tags": [
                     "users"
                 ],
-                "summary": "Hapus pengguna",
+                "summary": "Hapus pengguna (Soft Delete)",
                 "parameters": [
                     {
                         "type": "integer",
@@ -1921,7 +1939,7 @@ const docTemplate = `{
                         }
                     },
                     "403": {
-                        "description": "Tidak memiliki izin user:delete",
+                        "description": "Tidak memiliki izin user:delete atau tidak boleh menghapus akun sendiri",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -2279,8 +2297,6 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "claim_id",
-                "item_id",
-                "points",
                 "reason"
             ],
             "properties": {
@@ -2289,16 +2305,7 @@ const docTemplate = `{
                     "minimum": 1
                 },
                 "feedback": {
-                    "$ref": "#/definitions/model.Feedback"
-                },
-                "item_id": {
-                    "type": "integer",
-                    "minimum": 1
-                },
-                "points": {
-                    "type": "integer",
-                    "maximum": 100,
-                    "minimum": 1
+                    "$ref": "#/definitions/model.FeedbackInput"
                 },
                 "reason": {
                     "type": "string",
@@ -2401,7 +2408,6 @@ const docTemplate = `{
             "required": [
                 "category_id",
                 "description",
-                "event_date",
                 "item_type",
                 "location",
                 "title"
@@ -2480,6 +2486,22 @@ const docTemplate = `{
                 }
             }
         },
+        "model.CreateVerificationSessionRequest": {
+            "type": "object",
+            "required": [
+                "questions"
+            ],
+            "properties": {
+                "questions": {
+                    "type": "array",
+                    "maxItems": 10,
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/model.VerificationQuestionItem"
+                    }
+                }
+            }
+        },
         "model.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -2523,6 +2545,23 @@ const docTemplate = `{
                 }
             }
         },
+        "model.FeedbackInput": {
+            "type": "object",
+            "required": [
+                "rating"
+            ],
+            "properties": {
+                "comment": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "rating": {
+                    "type": "integer",
+                    "maximum": 5,
+                    "minimum": 1
+                }
+            }
+        },
         "model.Item": {
             "type": "object",
             "properties": {
@@ -2533,6 +2572,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
                     "type": "string"
                 },
                 "description": {
@@ -2832,18 +2874,18 @@ const docTemplate = `{
                 }
             }
         },
-        "model.SubmitQARequest": {
+        "model.SubmitAnswersRequest": {
             "type": "object",
             "required": [
-                "questions"
+                "answers"
             ],
             "properties": {
-                "questions": {
+                "answers": {
                     "type": "array",
                     "maxItems": 10,
                     "minItems": 1,
                     "items": {
-                        "$ref": "#/definitions/model.QuestionAnswer"
+                        "type": "string"
                     }
                 }
             }
@@ -2887,7 +2929,6 @@ const docTemplate = `{
                 "category_id",
                 "description",
                 "location",
-                "status",
                 "title"
             ],
             "properties": {
@@ -2904,15 +2945,6 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 150,
                     "minLength": 3
-                },
-                "status": {
-                    "type": "string",
-                    "enum": [
-                        "open",
-                        "claimed",
-                        "returned",
-                        "closed"
-                    ]
                 },
                 "title": {
                     "type": "string",
@@ -2943,6 +2975,9 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
                     "type": "string"
                 },
                 "email": {
@@ -2977,6 +3012,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "deleted_at": {
+                    "type": "string"
+                },
                 "email": {
                     "type": "string"
                 },
@@ -3009,6 +3047,26 @@ const docTemplate = `{
                 }
             }
         },
+        "model.UserPublic": {
+            "type": "object",
+            "properties": {
+                "full_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "trust_score": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
         "model.UserReputationResponse": {
             "type": "object",
             "properties": {
@@ -3028,7 +3086,20 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "user": {
-                    "$ref": "#/definitions/model.User"
+                    "$ref": "#/definitions/model.UserPublic"
+                }
+            }
+        },
+        "model.VerificationQuestionItem": {
+            "type": "object",
+            "required": [
+                "question"
+            ],
+            "properties": {
+                "question": {
+                    "type": "string",
+                    "maxLength": 300,
+                    "minLength": 3
                 }
             }
         },

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"time"
 
 	"findit-api/app/model"
 	"findit-api/app/repository"
@@ -52,7 +53,13 @@ func (s *ItemService) List(c *fiber.Ctx) error {
 		if err != nil {
 			return err
 		}
-		items, err := s.items.FindAfterCursor(ctx, cq)
+		itemCQ := model.ItemCursorQuery{
+			CursorQuery: cq,
+			ItemType:    strings.TrimSpace(c.Query("type")),
+			Status:      strings.TrimSpace(c.Query("status")),
+			CategoryID:  c.QueryInt("category_id", 0),
+		}
+		items, err := s.items.FindAfterCursor(ctx, itemCQ)
 		if err != nil {
 			return helper.Internal(err)
 		}
@@ -160,6 +167,10 @@ func (s *ItemService) Create(c *fiber.Ctx) error {
 	if errs := helper.ValidateStruct(req); len(errs) > 0 {
 		return helper.Validation(errs)
 	}
+	eventDate := req.EventDate.Time()
+	if eventDate.After(time.Now().Add(24 * time.Hour)) {
+		return helper.BadRequest("tanggal kejadian tidak boleh di masa depan")
+	}
 	if _, err := s.categories.FindByID(ctx, req.CategoryID); err != nil {
 		return helper.BadRequest("kategori tidak ditemukan")
 	}
@@ -170,7 +181,7 @@ func (s *ItemService) Create(c *fiber.Ctx) error {
 		Description: req.Description,
 		ItemType:    req.ItemType,
 		Location:    req.Location,
-		EventDate:   req.EventDate,
+		EventDate:   eventDate,
 	})
 	if err != nil {
 		return helper.Internal(err)
@@ -221,6 +232,26 @@ func (s *ItemService) Update(c *fiber.Ctx) error {
 	if errs := helper.ValidateStruct(req); len(errs) > 0 {
 		return helper.Validation(errs)
 	}
+	if req.Status == "" {
+		req.Status = existing.Status
+	}
+	if _, err := s.categories.FindByID(ctx, req.CategoryID); err != nil {
+		return helper.BadRequest("kategori tidak ditemukan")
+	}
+	if existing.Status == "returned" {
+		return helper.Conflict("barang yang sudah berstatus returned tidak dapat diubah")
+	}
+	if req.Status == "claimed" && existing.Status != "claimed" {
+		return helper.Conflict("status claimed hanya dapat diubah oleh sistem melalui proses klaim")
+	}
+	if existing.Status != req.Status {
+		if existing.Status == "claimed" && req.Status != "closed" {
+			return helper.Conflict("barang yang sedang dalam proses klaim tidak dapat diubah statusnya secara langsung")
+		}
+		if req.Status == "returned" {
+			return helper.Conflict("status returned hanya dapat diberikan melalui proses persetujuan klaim resmi")
+		}
+	}
 	updated, err := s.items.Update(ctx, id, req)
 	if err != nil {
 		return helper.Internal(err)
@@ -230,8 +261,8 @@ func (s *ItemService) Update(c *fiber.Ctx) error {
 
 // Delete godoc
 //
-// @Summary Hapus laporan barang
-// @Description Menghapus postingan barang yang dibuat oleh pengguna atau oleh admin.
+// @Summary Hapus laporan barang (Soft Delete)
+// @Description Menghapus postingan barang secara soft delete oleh pemilik atau admin.
 // @Tags items
 // @Security BearerAuth
 // @Param id path int true "ID Barang"
@@ -240,6 +271,7 @@ func (s *ItemService) Update(c *fiber.Ctx) error {
 // @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
 // @Failure 403 {object} model.ErrorResponse "Tidak berhak menghapus"
 // @Failure 404 {object} model.ErrorResponse "Barang tidak ditemukan"
+// @Failure 409 {object} model.ErrorResponse "Barang berstatus claimed tidak dapat dihapus"
 // @Router /items/{id} [delete]
 func (s *ItemService) Delete(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
@@ -259,6 +291,16 @@ func (s *ItemService) Delete(c *fiber.Ctx) error {
 	}
 	if existing.UserID != user.UserID && user.Role != "admin" {
 		return helper.Forbidden("tidak berhak menghapus laporan barang ini")
+	}
+	if existing.Status != "open" {
+		return helper.Conflict("hanya barang berstatus open yang dapat dihapus")
+	}
+	hasPending, err := s.items.HasPendingClaims(ctx, id)
+	if err != nil {
+		return helper.Internal(err)
+	}
+	if hasPending {
+		return helper.Conflict("barang tidak dapat dihapus karena masih memiliki klaim aktif yang sedang diproses")
 	}
 	if err := s.items.Delete(ctx, id); err != nil {
 		return helper.Internal(err)

@@ -17,6 +17,7 @@ type TokenRepository interface {
 	FindByHash(ctx context.Context, tokenHash string) (model.RefreshToken, error)
 	Revoke(ctx context.Context, tokenHash string) error
 	RevokeAllUserTokens(ctx context.Context, userID int) error
+	Rotate(ctx context.Context, tokenHash string) (int, error)
 }
 
 type tokenPostgresRepository struct {
@@ -84,4 +85,26 @@ func (r *tokenPostgresRepository) RevokeAllUserTokens(ctx context.Context, userI
 		return fmt.Errorf("mencabut seluruh refresh token user: %w", err)
 	}
 	return nil
+}
+
+// Rotate mencabut refresh token lama dan mengembalikan user_id dalam satu operasi SQL atomik,
+// mencegah race condition jika ada concurrent refresh requests.
+func (r *tokenPostgresRepository) Rotate(ctx context.Context, tokenHash string) (int, error) {
+	var userID int
+	err := r.pool.QueryRow(ctx,
+		`UPDATE refresh_tokens
+		 SET revoked_at = NOW()
+		 WHERE token_hash = $1
+		   AND revoked_at IS NULL
+		   AND expires_at > NOW()
+		 RETURNING user_id`,
+		tokenHash,
+	).Scan(&userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, ErrNotFound
+		}
+		return 0, fmt.Errorf("rotasi refresh token: %w", err)
+	}
+	return userID, nil
 }

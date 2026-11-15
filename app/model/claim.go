@@ -17,5 +17,6 @@ type CreateClaimRequest struct {
 }
 
 type UpdateClaimStatusRequest struct {
-	Status string `json:"status" validate:"required,oneof=approved rejected cancelled"`
+	Status  string `json:"status" validate:"required,oneof=approved rejected cancelled"`
+	Version int    `json:"version,omitempty" swaggerignore:"true"`
 }

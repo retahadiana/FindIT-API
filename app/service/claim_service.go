@@ -18,10 +18,15 @@ type ClaimService struct {
 	items  repository.ItemRepository
 	outbox repository.OutboxRepository
 	tx     *repository.TxManager
+	verif  repository.VerificationRepository
 }
 
-func NewClaimService(claims repository.ClaimRepository, items repository.ItemRepository, outbox repository.OutboxRepository, tx *repository.TxManager) *ClaimService {
-	return &ClaimService{claims: claims, items: items, outbox: outbox, tx: tx}
+func NewClaimService(claims repository.ClaimRepository, items repository.ItemRepository, outbox repository.OutboxRepository, tx *repository.TxManager, verif ...repository.VerificationRepository) *ClaimService {
+	s := &ClaimService{claims: claims, items: items, outbox: outbox, tx: tx}
+	if len(verif) > 0 {
+		s.verif = verif[0]
+	}
+	return s
 }
 
 // Create godoc
@@ -85,6 +90,9 @@ func (s *ClaimService) Create(c *fiber.Ctx) error {
 		return err
 	})
 	if err != nil {
+		if errors.Is(err, repository.ErrItemNotOpen) {
+			return helper.Conflict("barang sudah tidak dalam status open atau tidak ditemukan")
+		}
 		if errors.Is(err, repository.ErrDuplicate) {
 			return helper.Conflict("Anda sudah mengajukan klaim pada barang ini")
 		}
@@ -109,6 +117,10 @@ func (s *ClaimService) Create(c *fiber.Ctx) error {
 func (s *ClaimService) Get(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
+	actor, ok := helper.CurrentUser(c)
+	if !ok {
+		return helper.Unauthorized("belum terautentikasi")
+	}
 	id, valid := helper.ParamID(c)
 	if !valid {
 		return helper.BadRequest("id klaim tidak valid")
@@ -116,6 +128,13 @@ func (s *ClaimService) Get(c *fiber.Ctx) error {
 	claim, err := s.claims.FindByID(ctx, id)
 	if err != nil {
 		return helper.NotFound("klaim tidak ditemukan")
+	}
+	item, err := s.items.FindByID(ctx, claim.ItemID)
+	if err != nil {
+		return helper.NotFound("barang tidak ditemukan")
+	}
+	if claim.ClaimantID != actor.UserID && item.UserID != actor.UserID && actor.Role != "admin" {
+		return helper.Forbidden("tidak berhak melihat detail klaim ini")
 	}
 	return helper.Success(c, fiber.StatusOK, "detail klaim ditemukan", claim)
 }
@@ -235,6 +254,20 @@ func (s *ClaimService) UpdateStatus(c *fiber.Ctx) error {
 	if (req.Status == "approved" || req.Status == "rejected") && item.UserID != actor.UserID && actor.Role != "admin" {
 		return helper.Forbidden("hanya penemu barang atau admin yang boleh memproses klaim")
 	}
+	if req.Status == "approved" {
+		if item.Status != "open" {
+			return helper.Conflict("barang sudah tidak dalam status open (sudah diselesaikan oleh klaim lain atau ditutup)")
+		}
+		if s.verif != nil {
+			session, err := s.verif.FindByClaimID(ctx, claimID)
+			if err == nil {
+				// Sesi verifikasi ada: wajib dipastikan sudah dinilai dan dinyatakan lolos
+				if !session.IsVerified {
+					return helper.Conflict("klaim tidak dapat disetujui karena hasil verifikasi ciri khusus belum lolos (is_verified = false)")
+				}
+			}
+		}
+	}
 
 	var updated model.Claim
 	err = s.tx.WithTx(ctx, func(tx pgx.Tx) error {
@@ -246,8 +279,22 @@ func (s *ClaimService) UpdateStatus(c *fiber.Ctx) error {
 		eventType := model.EventClaimDecided
 		if req.Status == "approved" {
 			eventType = model.EventItemReturned
-			if err := s.items.UpdateStatusWithOCC(ctx, tx, item.ID, "returned", item.Version); err != nil {
+			expectedVersion := item.Version
+			if req.Version > 0 {
+				expectedVersion = req.Version
+			}
+			if err := s.items.UpdateStatusWithOCC(ctx, tx, item.ID, "returned", expectedVersion); err != nil {
 				return err
+			}
+			rejectedClaims, err := s.claims.RejectOtherPendingClaims(ctx, tx, item.ID, claimID)
+			if err != nil {
+				return err
+			}
+			for _, rej := range rejectedClaims {
+				_, _ = s.outbox.Insert(ctx, tx, model.EventClaimDecided, model.ClaimEvent{
+					ClaimID: rej.ID, ItemID: item.ID, ItemTitle: item.Title,
+					FinderID: item.UserID, ClaimantID: rej.ClaimantID, Status: "rejected",
+				})
 			}
 		}
 		_, err = s.outbox.Insert(ctx, tx, eventType, model.ClaimEvent{

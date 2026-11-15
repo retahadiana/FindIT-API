@@ -13,7 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const userColumns = "id, username, email, password_hash, full_name, COALESCE(phone, ''), role, trust_score, created_at, updated_at"
+const userColumns = "id, username, email, password_hash, full_name, COALESCE(phone, ''), role, trust_score, created_at, updated_at, deleted_at"
 
 // UserRepository adalah kontrak penyimpanan data pengguna.
 type UserRepository interface {
@@ -51,6 +51,7 @@ func scanUser(row pgx.Row) (model.User, error) {
 		&u.TrustScore,
 		&u.CreatedAt,
 		&u.UpdatedAt,
+		&u.DeletedAt,
 	)
 	return u, err
 }
@@ -82,7 +83,7 @@ func (r *userPostgresRepository) Create(ctx context.Context, u model.User) (mode
 
 func (r *userPostgresRepository) FindByUsername(ctx context.Context, username string) (model.User, error) {
 	u, err := scanUser(r.pool.QueryRow(ctx,
-		`SELECT `+userColumns+` FROM users WHERE LOWER(username) = LOWER($1)`,
+		`SELECT `+userColumns+` FROM users WHERE LOWER(username) = LOWER($1) AND deleted_at IS NULL`,
 		username,
 	))
 	if err != nil {
@@ -96,7 +97,7 @@ func (r *userPostgresRepository) FindByUsername(ctx context.Context, username st
 
 func (r *userPostgresRepository) FindByEmail(ctx context.Context, email string) (model.User, error) {
 	u, err := scanUser(r.pool.QueryRow(ctx,
-		`SELECT `+userColumns+` FROM users WHERE LOWER(email) = LOWER($1)`,
+		`SELECT `+userColumns+` FROM users WHERE LOWER(email) = LOWER($1) AND deleted_at IS NULL`,
 		email,
 	))
 	if err != nil {
@@ -110,7 +111,7 @@ func (r *userPostgresRepository) FindByEmail(ctx context.Context, email string) 
 
 func (r *userPostgresRepository) FindByID(ctx context.Context, id int) (model.User, error) {
 	u, err := scanUser(r.pool.QueryRow(ctx,
-		`SELECT `+userColumns+` FROM users WHERE id = $1`,
+		`SELECT `+userColumns+` FROM users WHERE id = $1 AND deleted_at IS NULL`,
 		id,
 	))
 	if err != nil {
@@ -126,7 +127,7 @@ func (r *userPostgresRepository) UpdateProfile(ctx context.Context, id int, full
 	updated, err := scanUser(r.pool.QueryRow(ctx,
 		`UPDATE users
 		 SET full_name = $1, phone = NULLIF($2, ''), updated_at = NOW()
-		 WHERE id = $3
+		 WHERE id = $3 AND deleted_at IS NULL
 		 RETURNING `+userColumns,
 		fullName, phone, id,
 	))
@@ -147,7 +148,7 @@ func (r *userPostgresRepository) UpdateTrustScore(ctx context.Context, db DBTX, 
 	updated, err := scanUser(queryer.QueryRow(ctx,
 		`UPDATE users
 		 SET trust_score = GREATEST(0, trust_score + $1), updated_at = NOW()
-		 WHERE id = $2
+		 WHERE id = $2 AND deleted_at IS NULL
 		 RETURNING `+userColumns,
 		deltaPoints, id,
 	))
@@ -162,7 +163,7 @@ func (r *userPostgresRepository) UpdateTrustScore(ctx context.Context, db DBTX, 
 
 
 func (r *userPostgresRepository) FindAfterCursor(ctx context.Context, q model.CursorQuery) ([]model.User, error) {
-	conds := []string{"1=1"}
+	conds := []string{"deleted_at IS NULL"}
 	args := []any{}
 	idx := 1
 	if q.Search != "" {
@@ -198,7 +199,7 @@ func (r *userPostgresRepository) FindAfterCursor(ctx context.Context, q model.Cu
 func (r *userPostgresRepository) Update(ctx context.Context, id int, u model.User) (model.User, error) {
 	updated, err := scanUser(r.pool.QueryRow(ctx,
 		`UPDATE users SET username = $1, email = $2, full_name = $3, phone = NULLIF($4, ''), updated_at = NOW()
-		 WHERE id = $5 RETURNING `+userColumns,
+		 WHERE id = $5 AND deleted_at IS NULL RETURNING `+userColumns,
 		u.Username, u.Email, u.FullName, u.Phone, id))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -214,7 +215,7 @@ func (r *userPostgresRepository) Update(ctx context.Context, id int, u model.Use
 
 func (r *userPostgresRepository) UpdateRole(ctx context.Context, id int, role string) (model.User, error) {
 	updated, err := scanUser(r.pool.QueryRow(ctx,
-		`UPDATE users SET role = $1, updated_at = NOW() WHERE id = $2 RETURNING `+userColumns, role, id))
+		`UPDATE users SET role = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL RETURNING `+userColumns, role, id))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return model.User{}, ErrNotFound
@@ -225,12 +226,18 @@ func (r *userPostgresRepository) UpdateRole(ctx context.Context, id int, role st
 }
 
 func (r *userPostgresRepository) Delete(ctx context.Context, id int) error {
-	tag, err := r.pool.Exec(ctx, `DELETE FROM users WHERE id = $1`, id)
+	tag, err := r.pool.Exec(ctx, `UPDATE users SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, id)
 	if err != nil {
 		return err
 	}
 	if tag.RowsAffected() == 0 {
 		return ErrNotFound
 	}
+	// Revoke semua sesi refresh token aktif untuk user yang dihapus
+	_, _ = r.pool.Exec(ctx, `UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = $1 AND revoked_at IS NULL`, id)
+	// Batalkan semua klaim berstatus pending yang diajukan oleh user ini (mencegah zombie claims)
+	_, _ = r.pool.Exec(ctx, `UPDATE claims SET status = 'cancelled', updated_at = NOW() WHERE claimant_id = $1 AND status = 'pending'`, id)
+	// Tutup semua postingan barang open milik user ini (mencegah zombie items)
+	_, _ = r.pool.Exec(ctx, `UPDATE items SET status = 'closed', updated_at = NOW() WHERE user_id = $1 AND status = 'open' AND deleted_at IS NULL`, id)
 	return nil
 }
