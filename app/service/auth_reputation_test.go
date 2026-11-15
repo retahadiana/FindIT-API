@@ -67,7 +67,7 @@ func (r *fakeUserRepo) FindByUsername(_ context.Context, username string) (model
 	defer r.mu.Unlock()
 
 	for _, u := range r.users {
-		if strings.EqualFold(u.Username, username) {
+		if strings.EqualFold(u.Username, username) && u.DeletedAt == nil {
 			return u, nil
 		}
 	}
@@ -79,7 +79,7 @@ func (r *fakeUserRepo) FindByEmail(_ context.Context, email string) (model.User,
 	defer r.mu.Unlock()
 
 	for _, u := range r.users {
-		if strings.EqualFold(u.Email, email) {
+		if strings.EqualFold(u.Email, email) && u.DeletedAt == nil {
 			return u, nil
 		}
 	}
@@ -91,7 +91,7 @@ func (r *fakeUserRepo) FindByID(_ context.Context, id int) (model.User, error) {
 	defer r.mu.Unlock()
 
 	u, ok := r.users[id]
-	if !ok {
+	if !ok || u.DeletedAt != nil {
 		return model.User{}, repository.ErrNotFound
 	}
 	return u, nil
@@ -102,7 +102,7 @@ func (r *fakeUserRepo) UpdateProfile(_ context.Context, id int, fullName, phone 
 	defer r.mu.Unlock()
 
 	u, ok := r.users[id]
-	if !ok {
+	if !ok || u.DeletedAt != nil {
 		return model.User{}, repository.ErrNotFound
 	}
 	u.FullName = fullName
@@ -117,7 +117,7 @@ func (r *fakeUserRepo) UpdateTrustScore(_ context.Context, _ repository.DBTX, id
 	defer r.mu.Unlock()
 
 	u, ok := r.users[id]
-	if !ok {
+	if !ok || u.DeletedAt != nil {
 		return model.User{}, repository.ErrNotFound
 	}
 	u.TrustScore += deltaPoints
@@ -141,7 +141,7 @@ func (r *fakeUserRepo) UpdateRole(_ context.Context, id int, role string) (model
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	u, ok := r.users[id]
-	if !ok {
+	if !ok || u.DeletedAt != nil {
 		return model.User{}, repository.ErrNotFound
 	}
 	u.Role = role
@@ -152,7 +152,13 @@ func (r *fakeUserRepo) UpdateRole(_ context.Context, id int, role string) (model
 func (r *fakeUserRepo) Delete(_ context.Context, id int) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	delete(r.users, id)
+	u, ok := r.users[id]
+	if !ok || u.DeletedAt != nil {
+		return repository.ErrNotFound
+	}
+	now := time.Now().UTC()
+	u.DeletedAt = &now
+	r.users[id] = u
 	return nil
 }
 
@@ -212,6 +218,20 @@ func (r *fakeTokenRepo) RevokeAllUserTokens(_ context.Context, userID int) error
 		}
 	}
 	return nil
+}
+
+func (r *fakeTokenRepo) Rotate(_ context.Context, tokenHash string) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	t, ok := r.tokens[tokenHash]
+	if !ok || t.RevokedAt != nil || !t.ExpiresAt.After(time.Now()) {
+		return 0, repository.ErrNotFound
+	}
+	now := time.Now().UTC()
+	t.RevokedAt = &now
+	r.tokens[tokenHash] = t
+	return t.UserID, nil
 }
 
 type fakeReputationRepo struct {
@@ -289,7 +309,7 @@ func newTestEnv(t *testing.T) testEnv {
 		Permissions:       perms,
 		AuthService:       service.NewAuthService(users, tokens, jwtManager, perms, 7*24*time.Hour),
 		UserService:       service.NewUserService(users, perms),
-		ReputationService: service.NewReputationService(users, reputations, nil),
+		ReputationService: service.NewReputationService(users, reputations, nil, nil, nil),
 	}, "*")
 
 	return testEnv{app: app, jwt: jwtManager, users: users}
@@ -486,5 +506,33 @@ func TestRequireRoleMiddleware(t *testing.T) {
 	}
 	if respAdmin.StatusCode != http.StatusOK {
 		t.Fatalf("admin role status = %d, want 200", respAdmin.StatusCode)
+	}
+}
+
+func TestTokenRotation_AtomicPreventRace(t *testing.T) {
+	ctx := context.Background()
+	repo := newFakeTokenRepo()
+
+	now := time.Now().UTC()
+	hash := "sample_hash_token_123"
+	_ = repo.Save(ctx, model.RefreshToken{
+		UserID:    5,
+		TokenHash: hash,
+		ExpiresAt: now.Add(24 * time.Hour),
+	})
+
+	// 1. Pemanggilan rotasi pertama harus berhasil mendapatkan UserID
+	userID, err := repo.Rotate(ctx, hash)
+	if err != nil {
+		t.Fatalf("rotasi pertama harus berhasil, got error: %v", err)
+	}
+	if userID != 5 {
+		t.Fatalf("expected userID 5, got %d", userID)
+	}
+
+	// 2. Pemanggilan rotasi kedua dengan token hash yang sama harus ditolak (ErrNotFound)
+	_, err = repo.Rotate(ctx, hash)
+	if err != repository.ErrNotFound {
+		t.Fatalf("rotasi kedua (replayed token) harus gagal dengan ErrNotFound, got: %v", err)
 	}
 }

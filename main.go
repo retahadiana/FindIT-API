@@ -98,11 +98,11 @@ func main() {
 			Permissions:         perms,
 			AuthService:         service.NewAuthService(userRepo, tokenRepo, jwtMgr, perms, refreshTTL),
 			UserService:         service.NewUserService(userRepo, perms),
-			ReputationService:   service.NewReputationService(userRepo, repRepo, outboxRepo),
+			ReputationService:   service.NewReputationService(userRepo, repRepo, claimRepo, itemRepo, outboxRepo),
 			NotificationService: service.NewNotificationService(notifRepo, outboxRepo, inspector),
 			CategoryService:     service.NewCategoryService(catRepo),
 			ItemService:         service.NewItemService(itemRepo, catRepo),
-			ClaimService:        service.NewClaimService(claimRepo, itemRepo, outboxRepo, txMgr),
+			ClaimService:        service.NewClaimService(claimRepo, itemRepo, outboxRepo, txMgr, verifRepo),
 			VerificationService: service.NewVerificationService(verifRepo, claimRepo, itemRepo),
 			EnableSwagger:       config.GetEnv("SWAGGER_ENABLED", "true") == "true",
 		}, config.GetEnv("ALLOWED_ORIGINS", "*"))

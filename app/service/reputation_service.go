@@ -16,6 +16,8 @@ import (
 type ReputationService struct {
 	users       repository.UserRepository
 	reputations repository.ReputationRepository
+	claims      repository.ClaimRepository
+	items       repository.ItemRepository
 	outbox      repository.OutboxRepository
 }
 
@@ -23,12 +25,39 @@ type ReputationService struct {
 func NewReputationService(
 	users repository.UserRepository,
 	reputations repository.ReputationRepository,
+	claims repository.ClaimRepository,
+	items repository.ItemRepository,
 	outbox repository.OutboxRepository,
 ) *ReputationService {
 	return &ReputationService{
 		users:       users,
 		reputations: reputations,
+		claims:      claims,
+		items:       items,
 		outbox:      outbox,
+	}
+}
+
+// CalculatePointsFromRating menentukan poin reputasi berdasarkan rating kepuasan ulasan (1-5).
+// Rating 5: +35 poin (Sangat memuaskan, penemu langsung dipromosikan ke badge Silver)
+// Rating 4: +20 poin (Baik & kooperatif)
+// Rating 3: +10 poin (Cukup / netral)
+// Rating 2: +5 poin  (Kurang memuaskan)
+// Rating 1: +0 poin  (Sangat buruk)
+func CalculatePointsFromRating(rating int) int {
+	switch rating {
+	case 5:
+		return 35
+	case 4:
+		return 20
+	case 3:
+		return 10
+	case 2:
+		return 5
+	case 1:
+		return 0
+	default:
+		return 10
 	}
 }
 
@@ -83,7 +112,7 @@ func (s *ReputationService) GetUserReputation(c *fiber.Ctx) error {
 	}
 
 	return helper.Success(c, fiber.StatusOK, "reputasi user berhasil diambil", model.UserReputationResponse{
-		User:       user,
+		User:       model.ToUserPublic(user),
 		Score:      user.TrustScore,
 		Badge:      BadgeForScore(user.TrustScore),
 		TotalFound: totalFound,
@@ -129,10 +158,23 @@ func (s *ReputationService) AddReward(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return helper.BadRequest("body harus berupa JSON yang valid")
 	}
+	// Poin reputasi dihitung secara otoritatif oleh sistem berdasarkan rating feedback untuk mencegah manipulasi poin.
+	if req.Feedback != nil && req.Feedback.Rating > 0 {
+		req.Points = CalculatePointsFromRating(req.Feedback.Rating)
+	} else if current.Role == "admin" && req.Points > 0 {
+		// Khusus admin dapat menentukan poin reward kustom
+	} else {
+		req.Points = 10 // Poin default otomatis
+	}
 	req.Reason = strings.TrimSpace(req.Reason)
+	var logFeedback *model.Feedback
 	if req.Feedback != nil {
 		req.Feedback.Comment = strings.TrimSpace(req.Feedback.Comment)
-		req.Feedback.FromUserID = current.UserID
+		logFeedback = &model.Feedback{
+			Rating:     req.Feedback.Rating,
+			Comment:    req.Feedback.Comment,
+			FromUserID: current.UserID,
+		}
 	}
 
 	if errs := helper.ValidateStruct(req); len(errs) > 0 {
@@ -146,30 +188,60 @@ func (s *ReputationService) AddReward(c *fiber.Ctx) error {
 		return helper.Internal(err)
 	}
 
+	// Validasi integritas klaim & anti-fraud reward
+	if s.claims != nil {
+		claim, err := s.claims.FindByID(ctx, req.ClaimID)
+		if err != nil {
+			return helper.NotFound("klaim tidak ditemukan")
+		}
+		// Selalu gunakan ItemID resmi dari data klaim untuk mencegah manipulasi ID barang
+		req.ItemID = claim.ItemID
+		if claim.ClaimantID != current.UserID && current.Role != "admin" {
+			return helper.Forbidden("hanya pengklaim sah penerima barang yang boleh memberikan reward")
+		}
+		if claim.Status != "approved" {
+			return helper.Conflict("reward hanya dapat diberikan untuk klaim yang sudah disetujui (approved)")
+		}
+		if s.items != nil {
+			item, err := s.items.FindByID(ctx, req.ItemID)
+			if err != nil {
+				return helper.NotFound("barang tidak ditemukan")
+			}
+			if item.UserID != targetUserID {
+				return helper.BadRequest("penerima reward bukan penemu sah dari barang ini")
+			}
+		}
+	}
+
+	// Dual-write: 1. Update trust score di PostgreSQL
+	updatedUser, err := s.users.UpdateTrustScore(ctx, nil, targetUserID, req.Points)
+	if err != nil {
+		return helper.Internal(err)
+	}
+
+	// Dual-write: 2. Catat audit log ke MongoDB
 	createdLog, err := s.reputations.CreateLog(ctx, model.ReputationLog{
 		UserID:    targetUserID,
 		ClaimID:   req.ClaimID,
 		ItemID:    req.ItemID,
 		Points:    req.Points,
 		Reason:    req.Reason,
-		Feedback:  req.Feedback,
+		Feedback:  logFeedback,
 		CreatedAt: time.Now().UTC(),
 	})
 	if err != nil {
+		// Kompensasi rollback PostgreSQL jika MongoDB gagal/duplikat
+		_, _ = s.users.UpdateTrustScore(ctx, nil, targetUserID, -req.Points)
 		if errors.Is(err, repository.ErrDuplicate) {
 			return helper.Conflict("reward reputasi untuk klaim ini sudah diberikan")
 		}
 		return helper.Internal(err)
 	}
 
-	updatedUser, err := s.users.UpdateTrustScore(ctx, nil, targetUserID, req.Points)
-	if err == nil && s.outbox != nil {
+	if s.outbox != nil {
 		_, _ = s.outbox.Insert(ctx, nil, model.EventReputationRewarded, model.ReputationRewardedEvent{
 			UserID: targetUserID, ClaimID: req.ClaimID, ItemID: req.ItemID, Points: req.Points, Reason: req.Reason,
 		})
-	}
-	if err != nil {
-		return helper.Internal(err)
 	}
 
 	return helper.Success(c, fiber.StatusCreated, "poin reputasi berhasil ditambahkan", fiber.Map{

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -57,6 +58,11 @@ func (r *OutboxRelay) ProcessOnce(ctx context.Context) error {
 			body, _ := json.Marshal(payload)
 			task := asynq.NewTask(model.TaskEmailSend, body, asynq.TaskID(fmt.Sprintf("outbox:%d", msg.ID)))
 			if _, err := r.enqueuer.EnqueueContext(ctx, task, asynq.Queue(queue), asynq.MaxRetry(5)); err != nil {
+				if errors.Is(err, asynq.ErrTaskIDConflict) {
+					// Task sudah ada di antrian Redis (idempotent), tandai sebagai published
+					published = append(published, msg.ID)
+					continue
+				}
 				return err
 			}
 			published = append(published, msg.ID)

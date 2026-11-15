@@ -187,7 +187,7 @@ Endpoint terproteksi wajib menyertakan header `Authorization: Bearer <access_tok
 | 11 | `GET` | `/api/v1/users/:id` | Pemilik / `user:read:any` | Mengambil data profil spesifik satu pengguna berdasarkan ID |
 | 12 | `PUT` | `/api/v1/users/:id` | `user:update:any` (Admin) | Penggantian seluruh data profil pengguna secara utuh oleh Administrator |
 | 13 | `PATCH` | `/api/v1/users/:id` | `user:update:any` (Admin) | Pembaruan parsial atribut pengguna (`ApplyPatch` & sanitasi string) |
-| 14 | `DELETE`| `/api/v1/users/:id` | `user:delete` (Admin) | Penghapusan akun pengguna dari basis data oleh Administrator |
+| 14 | `DELETE`| `/api/v1/users/:id` | `user:delete` (Admin) | Soft delete akun pengguna oleh Administrator (*Self-Delete Guard* 403) |
 | 15 | `PATCH` | `/api/v1/users/:id/role`| `role:assign` (Admin) | Penugasan wewenang dinamis (*Self-Role Modification Guard* 403) |
 | 16 | `GET` | `/api/v1/users/:id/reputation` | RequireAuth | Melihat skor reputasi, riwayat badge, dan total reward penemuan |
 | 17 | `GET` | `/api/v1/users/:id/reputation/summary`| RequireAuth | Ringkasan agregasi MongoDB `$facet` (rata-rata skor, distribusi ulasan) |

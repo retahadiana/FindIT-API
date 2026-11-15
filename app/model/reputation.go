@@ -2,11 +2,17 @@ package model
 
 import "time"
 
+// FeedbackInput adalah payload ulasan dari klien saat memberikan feedback.
+type FeedbackInput struct {
+	Rating  int    `json:"rating" validate:"required,min=1,max=5"`
+	Comment string `json:"comment,omitempty" validate:"omitempty,max=500"`
+}
+
 // Feedback menyimpan ulasan dan rating dari pemilik barang kepada penemu barang.
 type Feedback struct {
 	Rating     int    `json:"rating" validate:"required,min=1,max=5"`
 	Comment    string `json:"comment,omitempty" validate:"omitempty,max=500"`
-	FromUserID int    `json:"from_user_id"`
+	FromUserID int    `json:"from_user_id,omitempty"`
 }
 
 // ReputationLog merepresentasikan satu dokumen audit pemberian poin reputasi di MongoDB.
@@ -24,11 +30,11 @@ type ReputationLog struct {
 // AddReputationRequest adalah payload untuk memberikan poin reputasi dan feedback
 // kepada penemu setelah pengembalian barang selesai.
 type AddReputationRequest struct {
-	ClaimID  int       `json:"claim_id" validate:"required,min=1"`
-	ItemID   int       `json:"item_id" validate:"required,min=1"`
-	Points   int       `json:"points" validate:"required,min=1,max=100"`
-	Reason   string    `json:"reason" validate:"required,min=3,max=255"`
-	Feedback *Feedback `json:"feedback,omitempty" validate:"omitempty"`
+	ClaimID  int            `json:"claim_id" validate:"required,min=1"`
+	Reason   string         `json:"reason" validate:"required,min=3,max=255"`
+	Feedback *FeedbackInput `json:"feedback,omitempty" validate:"omitempty"`
+	Points   int            `json:"points,omitempty" swaggerignore:"true"`
+	ItemID   int            `json:"item_id,omitempty" swaggerignore:"true"`
 }
 
 

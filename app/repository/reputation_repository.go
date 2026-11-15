@@ -181,8 +181,15 @@ func (r *reputationMongoRepository) SummaryByUserID(ctx context.Context, userID 
 	}
 	defer cursor.Close(ctx)
 	var out []struct {
-		Stats        []struct{ Count, TotalPoints int; AvgRating float64 } `bson:"stats"`
-		Distribution []struct{ ID int `bson:"_id"`; Total int }            `bson:"distribution"`
+		Stats []struct {
+			Count       int     `bson:"count"`
+			TotalPoints int     `bson:"total_points"`
+			AvgRating   float64 `bson:"avg_rating"`
+		} `bson:"stats"`
+		Distribution []struct {
+			ID    int `bson:"_id"`
+			Total int `bson:"total"`
+		} `bson:"distribution"`
 	}
 	if err := cursor.All(ctx, &out); err != nil {
 		return model.ReputationSummary{}, err

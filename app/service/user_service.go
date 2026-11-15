@@ -332,23 +332,30 @@ func (s *UserService) AssignRole(c *fiber.Ctx) error {
 
 // Delete godoc
 //
-// @Summary Hapus pengguna
-// @Description Menghapus data akun pengguna dari sistem secara permanen.
+// @Summary Hapus pengguna (Soft Delete)
+// @Description Menonaktifkan data akun pengguna dari sistem secara soft delete.
 // @Tags users
 // @Security BearerAuth
 // @Param id path int true "ID Pengguna"
 // @Success 204 "Berhasil dihapus tanpa body"
 // @Failure 400 {object} model.ErrorResponse "ID user tidak valid"
 // @Failure 401 {object} model.ErrorResponse "Belum terautentikasi"
-// @Failure 403 {object} model.ErrorResponse "Tidak memiliki izin user:delete"
+// @Failure 403 {object} model.ErrorResponse "Tidak memiliki izin user:delete atau tidak boleh menghapus akun sendiri"
 // @Failure 404 {object} model.ErrorResponse "User tidak ditemukan"
 // @Router /users/{id} [delete]
 func (s *UserService) Delete(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
+	actor, ok := helper.CurrentUser(c)
+	if !ok {
+		return helper.Unauthorized("belum terautentikasi")
+	}
 	id, valid := helper.ParamID(c)
 	if !valid {
 		return helper.BadRequest("id user tidak valid")
+	}
+	if actor.UserID == id {
+		return helper.Forbidden("tidak boleh menghapus akun sendiri")
 	}
 	if err := s.users.Delete(ctx, id); err != nil {
 		if errors.Is(err, repository.ErrNotFound) {

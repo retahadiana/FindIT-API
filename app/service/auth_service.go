@@ -168,19 +168,15 @@ func (s *AuthService) Refresh(c *fiber.Ctx) error {
 	}
 
 	hash := helper.SHA256Hex(req.RefreshToken)
-	stored, err := s.tokens.FindByHash(ctx, hash)
+	// Rotasi token secara atomik: hanya 1 concurrent request yang dapat mencabut token aktif.
+	userID, err := s.tokens.Rotate(ctx, hash)
 	if err != nil {
 		return helper.Unauthorized("refresh token tidak valid atau sudah kedaluwarsa")
 	}
 
-	user, err := s.users.FindByID(ctx, stored.UserID)
+	user, err := s.users.FindByID(ctx, userID)
 	if err != nil {
 		return helper.Unauthorized("akun tidak dapat dipakai")
-	}
-
-	// Rotasi token: refresh token lama dicabut sebelum menerbitkan pasangan baru.
-	if err := s.tokens.Revoke(ctx, hash); err != nil {
-		return helper.Internal(err)
 	}
 
 	pair, err := s.issueTokenPair(ctx, user)
