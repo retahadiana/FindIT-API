@@ -79,6 +79,7 @@ func BadgeForScore(score int) string {
 // @Description Mengambil skor trust score, badge level, total barang dikembalikan, dan riwayat ulasan dari MongoDB.
 // @Tags reputation
 // @Produce json
+// @Security BearerAuth
 // @Param id path int true "ID Pengguna"
 // @Success 200 {object} model.WebResponse{data=model.UserReputationResponse}
 // @Failure 400 {object} model.ErrorResponse "ID user harus berupa angka positif"
@@ -258,6 +259,7 @@ func (s *ReputationService) AddReward(c *fiber.Ctx) error {
 // @Description Mengambil ringkasan statistik rating bintang pengguna via MongoDB aggregation $facet.
 // @Tags reputation
 // @Produce json
+// @Security BearerAuth
 // @Param id path int true "ID Pengguna"
 // @Success 200 {object} model.WebResponse{data=model.ReputationSummary}
 // @Failure 400 {object} model.ErrorResponse "ID user harus berupa angka positif"
