@@ -29,7 +29,7 @@ func NewUserService(users repository.UserRepository, perms *helper.PermissionSet
 // @Produce json
 // @Produce text/csv
 // @Security BearerAuth
-// @Param cursor query string false "Cursor untuk navigasi halaman berikutnya"
+// @Param after query string false "Cursor untuk navigasi halaman berikutnya (didukung juga: cursor)"
 // @Param limit query int false "Batas jumlah data per halaman (default 20, maks 100)"
 // @Param search query string false "Pencarian nama atau username"
 // @Success 200 {object} model.WebResponse{data=[]model.User}

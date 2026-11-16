@@ -1,4 +1,3 @@
-// === FILE: app/service/item_service.go ===
 package service
 
 import (
@@ -35,7 +34,7 @@ func NewItemService(items repository.ItemRepository, categories repository.Categ
 // @Param category_id query int false "Filter berdasarkan ID kategori"
 // @Param page query int false "Nomor halaman (default 1)"
 // @Param limit query int false "Batas item per halaman (default 20, maks 100)"
-// @Param search query string false "Kata kunci judul atau deskripsi"
+// @Param search query string false "Kata kunci judul atau lokasi"
 // @Param after query string false "Cursor untuk cursor-based pagination"
 // @Success 200 {object} model.WebResponse{data=[]model.Item}
 // @Router /items [get]

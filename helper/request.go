@@ -32,7 +32,7 @@ func ParamID(c *fiber.Ctx) (int, bool) {
 }
 
 var allowedSort = map[string]bool{
-	"id": true, "username": true, "email": true, "created_at": true,
+	"id": true, "title": true, "event_date": true, "created_at": true,
 }
 
 // ParseListQuery membaca query string paginasi dengan nilai default yang aman.
@@ -41,8 +41,8 @@ func ParseListQuery(c *fiber.Ctx) model.ListQuery {
 		Page:   c.QueryInt("page", 1),
 		Limit:  c.QueryInt("limit", 10),
 		Search: strings.TrimSpace(c.Query("search")),
-		Sort:   c.Query("sort", "id"),
-		Order:  strings.ToLower(c.Query("order", "asc")),
+		Sort:   c.Query("sort", "created_at"),
+		Order:  strings.ToLower(c.Query("order", "desc")),
 	}
 	if q.Page < 1 {
 		q.Page = 1
@@ -54,16 +54,15 @@ func ParseListQuery(c *fiber.Ctx) model.ListQuery {
 		q.Limit = 100
 	}
 	if !allowedSort[q.Sort] {
-		q.Sort = "id"
+		q.Sort = "created_at"
 	}
-	if q.Order != "desc" {
-		q.Order = "asc"
+	if q.Order != "asc" {
+		q.Order = "desc"
 	}
 	return q
 }
 
-
-// ParseCursorQuery membaca parameter keyset pagination (?after=...&limit=...&search=...).
+// ParseCursorQuery membaca parameter keyset pagination (?after=...&limit=...&search=... atau ?cursor=...).
 func ParseCursorQuery(c *fiber.Ctx) (model.CursorQuery, error) {
 	q := model.CursorQuery{
 		Limit:  c.QueryInt("limit", 10),
@@ -75,7 +74,11 @@ func ParseCursorQuery(c *fiber.Ctx) (model.CursorQuery, error) {
 	if q.Limit > 100 {
 		q.Limit = 100
 	}
-	if afterRaw := strings.TrimSpace(c.Query("after")); afterRaw != "" {
+	afterRaw := strings.TrimSpace(c.Query("after"))
+	if afterRaw == "" {
+		afterRaw = strings.TrimSpace(c.Query("cursor"))
+	}
+	if afterRaw != "" {
 		cursor, err := DecodeCursor(afterRaw)
 		if err != nil {
 			return model.CursorQuery{}, BadRequest("parameter cursor tidak valid")
