@@ -39,7 +39,7 @@ func (r *notificationPostgresRepository) FindByUser(ctx context.Context, userID,
 		return nil, err
 	}
 	defer rows.Close()
-	var list []model.Notification
+	list := make([]model.Notification, 0)
 	for rows.Next() {
 		var n model.Notification
 		if err := rows.Scan(&n.ID, &n.OutboxID, &n.UserID, &n.Channel, &n.Subject, &n.Body, &n.SentAt); err != nil {
