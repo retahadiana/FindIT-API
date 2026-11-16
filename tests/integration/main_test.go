@@ -35,6 +35,12 @@ func TestMain(m *testing.M) {
 
 	testPool, err = pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
+		fmt.Printf("konfigurasi database test gagal: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := testPool.Ping(ctx); err != nil {
+		fmt.Printf("gagal terhubung ke database test (%s): %v\n", dsn, err)
 		os.Exit(1)
 	}
 
