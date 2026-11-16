@@ -1,4 +1,3 @@
-// === FILE: app/model/category.go ===
 package model
 
 import "time"
