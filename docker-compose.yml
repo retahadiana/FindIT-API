@@ -8,7 +8,7 @@ services:
       POSTGRES_DB: findit_db
     volumes:
       - pgdata:/var/lib/postgresql/data
-      # Inisialisasi otomatis skema tabel 001 s/d 006 saat volume database masih kosong:
+      # Inisialisasi otomatis seluruh skema tabel migrasi (001 s/d 009) saat volume database masih kosong:
       - ./migrations:/docker-entrypoint-initdb.d:ro
     ports: ["5432:5432"]
     healthcheck:

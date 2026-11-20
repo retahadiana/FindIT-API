@@ -82,7 +82,7 @@ func (r *claimPostgresRepository) queryMany(ctx context.Context, sql string, arg
 		return nil, err
 	}
 	defer rows.Close()
-	var list []model.Claim
+	list := make([]model.Claim, 0)
 	for rows.Next() {
 		c, err := scanClaim(rows)
 		if err != nil {
@@ -126,7 +126,7 @@ func (r *claimPostgresRepository) RejectOtherPendingClaims(ctx context.Context, 
 	}
 	defer rows.Close()
 
-	var rejected []model.Claim
+	rejected := make([]model.Claim, 0)
 	for rows.Next() {
 		c, err := scanClaim(rows)
 		if err != nil {

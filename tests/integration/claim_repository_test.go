@@ -17,17 +17,29 @@ func seedUserAndItem(t *testing.T) (finderID, claimantID, itemID int) {
 	t.Helper()
 	ctx := context.Background()
 
-	_, _ = testPool.Exec(ctx, `TRUNCATE notifications, outbox, claims, items, refresh_tokens, users RESTART IDENTITY CASCADE`)
-	_, _ = testPool.Exec(ctx, `INSERT INTO categories (name) VALUES ('Elektronik') ON CONFLICT (name) DO NOTHING`)
-	_ = testPool.QueryRow(ctx, `INSERT INTO users (username, email, password_hash, full_name) VALUES ('finder_test','finder@test.id','hash','Finder') RETURNING id`).Scan(&finderID)
-	_ = testPool.QueryRow(ctx, `INSERT INTO users (username, email, password_hash, full_name) VALUES ('claimant_test','claim@test.id','hash','Claimant') RETURNING id`).Scan(&claimantID)
+	if _, err := testPool.Exec(ctx, `TRUNCATE notifications, outbox, claims, items, refresh_tokens, users RESTART IDENTITY CASCADE`); err != nil {
+		t.Fatalf("gagal truncate tabel test: %v", err)
+	}
+	if _, err := testPool.Exec(ctx, `INSERT INTO categories (name) VALUES ('Elektronik') ON CONFLICT (name) DO NOTHING`); err != nil {
+		t.Fatalf("gagal seed kategori: %v", err)
+	}
+	if err := testPool.QueryRow(ctx, `INSERT INTO users (username, email, password_hash, full_name) VALUES ('finder_test','finder@test.id','hash','Finder') RETURNING id`).Scan(&finderID); err != nil {
+		t.Fatalf("gagal seed finder user: %v", err)
+	}
+	if err := testPool.QueryRow(ctx, `INSERT INTO users (username, email, password_hash, full_name) VALUES ('claimant_test','claim@test.id','hash','Claimant') RETURNING id`).Scan(&claimantID); err != nil {
+		t.Fatalf("gagal seed claimant user: %v", err)
+	}
 
 	var catID int
-	_ = testPool.QueryRow(ctx, `SELECT id FROM categories LIMIT 1`).Scan(&catID)
-	_ = testPool.QueryRow(ctx, `
+	if err := testPool.QueryRow(ctx, `SELECT id FROM categories LIMIT 1`).Scan(&catID); err != nil {
+		t.Fatalf("gagal mengambil id kategori: %v", err)
+	}
+	if err := testPool.QueryRow(ctx, `
 		INSERT INTO items (user_id, category_id, item_type, title, description, location, event_date, status, version)
 		VALUES ($1, $2, 'found', 'Laptop Lab', 'Abu-abu stiker kampus', 'Gedung A', '2026-11-10', 'open', 1)
-		RETURNING id`, finderID, catID).Scan(&itemID)
+		RETURNING id`, finderID, catID).Scan(&itemID); err != nil {
+		t.Fatalf("gagal seed item: %v", err)
+	}
 
 	return finderID, claimantID, itemID
 }

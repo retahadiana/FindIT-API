@@ -24,7 +24,7 @@ func main() {
 
 	var id int
 	var uname, role string
-	err = pool.QueryRow(context.Background(), `SELECT id, username, role FROM users WHERE username = $1`, *username).Scan(&id, &uname, &role)
+	err = pool.QueryRow(context.Background(), `SELECT id, username, role FROM users WHERE LOWER(username) = LOWER($1) AND deleted_at IS NULL`, *username).Scan(&id, &uname, &role)
 	if err != nil {
 		log.Fatalf("user tidak ditemukan: %v", err)
 	}

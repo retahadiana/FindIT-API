@@ -1221,7 +1221,7 @@ paths:
         in: query
         name: limit
         type: integer
-      - description: Kata kunci judul atau deskripsi
+      - description: Kata kunci judul atau lokasi
         in: query
         name: search
         type: string
@@ -1541,9 +1541,9 @@ paths:
       description: Menampilkan daftar pengguna dengan cursor pagination atau ekspor
         CSV melalui header Accept.
       parameters:
-      - description: Cursor untuk navigasi halaman berikutnya
+      - description: 'Cursor untuk navigasi halaman berikutnya (didukung juga: cursor)'
         in: query
-        name: cursor
+        name: after
         type: string
       - description: Batas jumlah data per halaman (default 20, maks 100)
         in: query
@@ -1836,6 +1836,8 @@ paths:
           description: User tidak ditemukan
           schema:
             $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Ambil skor reputasi dan riwayat log pengguna
       tags:
       - reputation
@@ -1865,6 +1867,8 @@ paths:
           description: ID user harus berupa angka positif
           schema:
             $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Ringkasan distribusi rating reputasi
       tags:
       - reputation

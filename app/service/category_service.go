@@ -1,4 +1,3 @@
-// === FILE: app/service/category_service.go ===
 package service
 
 import (

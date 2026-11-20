@@ -1,4 +1,3 @@
-// === FILE: app/repository/category_repository.go ===
 package repository
 
 import (
@@ -31,7 +30,7 @@ func (r *categoryPostgresRepository) FindAll(ctx context.Context) ([]model.Categ
 	}
 	defer rows.Close()
 
-	var list []model.Category
+	list := make([]model.Category, 0)
 	for rows.Next() {
 		var c model.Category
 		if err := rows.Scan(&c.ID, &c.Name, &c.Description, &c.CreatedAt); err != nil {

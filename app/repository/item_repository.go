@@ -1,4 +1,3 @@
-// === FILE: app/repository/item_repository.go ===
 package repository
 
 import (
@@ -76,14 +75,29 @@ func (r *itemPostgresRepository) FindAll(ctx context.Context, q model.ItemQuery)
 		return nil, 0, err
 	}
 	args = append(args, q.Limit, q.Offset())
+	order := "ASC"
+	if strings.ToLower(q.Order) == "desc" {
+		order = "DESC"
+	}
+	sortCol := "i.created_at"
+	switch q.Sort {
+	case "id":
+		sortCol = "i.id"
+	case "event_date":
+		sortCol = "i.event_date"
+	case "title":
+		sortCol = "i.title"
+	case "created_at":
+		sortCol = "i.created_at"
+	}
 	query := fmt.Sprintf(`SELECT %s FROM items i JOIN categories c ON c.id = i.category_id
-WHERE %s ORDER BY i.created_at DESC, i.id DESC LIMIT $%d OFFSET $%d`, itemCols, where, idx, idx+1)
+WHERE %s ORDER BY %s %s, i.id DESC LIMIT $%d OFFSET $%d`, itemCols, where, sortCol, order, idx, idx+1)
 	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer rows.Close()
-	var list []model.Item
+	list := make([]model.Item, 0)
 	for rows.Next() {
 		it, err := scanItem(rows)
 		if err != nil {
@@ -132,7 +146,7 @@ WHERE %s ORDER BY i.created_at DESC, i.id DESC LIMIT $%d`, itemCols, strings.Joi
 		return nil, err
 	}
 	defer rows.Close()
-	var list []model.Item
+	list := make([]model.Item, 0)
 	for rows.Next() {
 		it, err := scanItem(rows)
 		if err != nil {

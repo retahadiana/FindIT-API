@@ -265,6 +265,8 @@ func (s *ClaimService) UpdateStatus(c *fiber.Ctx) error {
 				if !session.IsVerified {
 					return helper.Conflict("klaim tidak dapat disetujui karena hasil verifikasi ciri khusus belum lolos (is_verified = false)")
 				}
+			} else if !errors.Is(err, repository.ErrNotFound) {
+				return helper.Internal(err)
 			}
 		}
 	}

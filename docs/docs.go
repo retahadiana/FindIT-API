@@ -1021,7 +1021,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Kata kunci judul atau deskripsi",
+                        "description": "Kata kunci judul atau lokasi",
                         "name": "search",
                         "in": "query"
                     },
@@ -1545,8 +1545,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Cursor untuk navigasi halaman berikutnya",
-                        "name": "cursor",
+                        "description": "Cursor untuk navigasi halaman berikutnya (didukung juga: cursor)",
+                        "name": "after",
                         "in": "query"
                     },
                     {
@@ -2035,6 +2035,11 @@ const docTemplate = `{
         },
         "/users/{id}/reputation": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Mengambil skor trust score, badge level, total barang dikembalikan, dan riwayat ulasan dari MongoDB.",
                 "produces": [
                     "application/json"
@@ -2088,6 +2093,11 @@ const docTemplate = `{
         },
         "/users/{id}/reputation/summary": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Mengambil ringkasan statistik rating bintang pengguna via MongoDB aggregation $facet.",
                 "produces": [
                     "application/json"

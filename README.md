@@ -37,10 +37,10 @@ Mata Kuliah: *Praktikum Pemrograman Backend Lanjut*
      ┌───────────────────────────┐         ┌───────────────────────────┐   ┌───────────────────────────┐
      │   PostgreSQL (Port 5432)  │         │    MongoDB (Port 27017)   │   │     Redis (Port 6379)     │
      ├───────────────────────────┤         ├───────────────────────────┤   ├───────────────────────────┤
-     │ • users & refresh_tokens  │         │ • item_verifications      │   │ • Asynq Message Queue     │
+     │ • users & refresh_tokens  │         │ • claim_verifications     │   │ • Asynq Message Queue     │
      │ • roles & permissions     │         │   (Array Q&A ciri rahasia │   │ • Task Type:              │
      │ • categories & items      │         │    kuota maks 10 butir)   │   │   "email:deliver"         │
-     │   (OCC kolom version)     │         │ • user_reputations        │   └─────────────┬─────────────┘
+     │   (OCC kolom version)     │         │ • reputation_logs         │   └─────────────┬─────────────┘
      │ • claims (Atomic OCC)     │         │   (Audit log reward &     │                 │
      │ • transactional outbox    │         │    agregasi $facet badge) │                 ▼
      │ • in-app notifications    │         └───────────────────────────┘   ┌───────────────────────────┐
@@ -97,18 +97,21 @@ JWT_SECRET=kunci-rahasia-minimal-32-karakter-harus-panjang-dan-aman!
 ```
 
 ### 3. Setup Database PostgreSQL & Migrasi SQL
-Buat database `findit_db`, kemudian jalankan seluruh 6 skrip migrasi berurutan:
+Buat database `findit_db`, kemudian jalankan seluruh 9 skrip migrasi berurutan:
 ```bash
 # Buat database PostgreSQL
 psql -U postgres -h localhost -p 5432 -c "CREATE DATABASE findit_db;"
 
-# Jalankan skrip migrasi 001 s/d 006
+# Jalankan skrip migrasi 001 s/d 009
 psql -U postgres -h localhost -p 5432 -d findit_db -f migrations/001_create_users_and_tokens.sql
 psql -U postgres -h localhost -p 5432 -d findit_db -f migrations/002_create_rbac.sql
 psql -U postgres -h localhost -p 5432 -d findit_db -f migrations/003_create_outbox_and_notifications.sql
 psql -U postgres -h localhost -p 5432 -d findit_db -f migrations/004_create_categories.sql
 psql -U postgres -h localhost -p 5432 -d findit_db -f migrations/005_create_items.sql
 psql -U postgres -h localhost -p 5432 -d findit_db -f migrations/006_create_claims.sql
+psql -U postgres -h localhost -p 5432 -d findit_db -f migrations/007_soft_delete.sql
+psql -U postgres -h localhost -p 5432 -d findit_db -f migrations/008_soft_delete_unique_indexes.sql
+psql -U postgres -h localhost -p 5432 -d findit_db -f migrations/009_create_users_cursor_index.sql
 ```
 *(Catatan: Koleksi dan indeks MongoDB akan diinisialisasi otomatis oleh aplikasi saat pertama kali dijalankan).*
 
@@ -179,7 +182,7 @@ Endpoint terproteksi wajib menyertakan header `Authorization: Bearer <access_tok
 | 3 | `POST` | `/api/v1/auth/register` | RequireJSON | Registrasi akun pengguna baru (Trust score default 100, role `user`) |
 | 4 | `POST` | `/api/v1/auth/login` | RateLimit (5/m), JSON | Login pengguna, anti-brute force, terbit Access & Refresh Token |
 | 5 | `POST` | `/api/v1/auth/refresh` | RequireJSON | Rotasi token baru; refresh token lama langsung dicabut (*revoked*) |
-| 6 | `POST` | `/api/v1/auth/logout` | RequireAuth | Pencabutan (*revoke*) status aktif refresh token di database PostgreSQL |
+| 6 | `POST` | `/api/v1/auth/logout` | RequireJSON | Pencabutan (*revoke*) status aktif refresh token di database PostgreSQL |
 | 7 | `GET` | `/api/v1/auth/me` | RequireAuth | Mengambil informasi profil lengkap akun pengguna yang sedang login |
 | 8 | `GET` | `/api/v1/users` | `user:list` (Admin) | Katalog seluruh pengguna dengan keyset cursor pagination (`?limit=&after=`) |
 | 9 | `POST` | `/api/v1/users` | `user:update:any` (Admin) | Pembuatan akun pengguna baru secara manual oleh Administrator |
@@ -267,12 +270,7 @@ Gunakan token yang dicetak pada terminal ke dalam header Postman:
 1. **Pencegahan SQL Injection**: Seluruh query relasional menggunakan *parameterized queries* bawaan driver `pgxpool`.
 2. **Pencegahan NoSQL Injection**: Seluruh input MongoDB divalidasi ketat (*strongly-typed struct*) di gerbang API Fiber.
 3. **Pencegahan Race Condition**: Menggunakan Optimistic Concurrency Control (OCC) pada kolom `version` dan transaksi atomik `pgx.Tx`.
-4. **Keamanan Dual Token JWT**: Access Token berumur singkat (15 menit), sedangkan Refresh Token (7 hari) disimpan dalam bentuk hash kriptografis SHA-256 di basis data dan mendukung rotasi otomatis serta pencabutan sesi logout.
+4. **Keamanan Dual Token JWT**: Access Token berumur 60 menit (default, dapat dikonfigurasi via JWT_ACCESS_TTL_MINUTES), sedangkan Refresh Token (7 hari) disimpan dalam bentuk hash kriptografis SHA-256 di basis data dan mendukung rotasi otomatis serta pencabutan sesi logout.
 5. **Proteksi Wewenang Dinamis**: Middleware `RequirePermission` dan *Self-Role Modification Guard* melindungi akun administrator dari kesalahan konfigurasi wewenang sendiri.
 
 ---
-
-## 📄 Berkas Laporan Akademik
-
-Format penyusunan laporan akhir tugas besar, rekapitulasi 56 tangkapan layar pengujian, dan matriks UAT lengkap terdokumentasi di:
-- **[laporan.docx](file:///d:/Go/FindIT-API/laporan.docx)** (Laporan Tugas Besar Resmi - Format Microsoft Word)

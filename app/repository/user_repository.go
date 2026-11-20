@@ -185,7 +185,7 @@ func (r *userPostgresRepository) FindAfterCursor(ctx context.Context, q model.Cu
 		return nil, err
 	}
 	defer rows.Close()
-	var list []model.User
+	list := make([]model.User, 0)
 	for rows.Next() {
 		u, err := scanUser(rows)
 		if err != nil {
